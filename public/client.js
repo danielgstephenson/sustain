@@ -29,7 +29,7 @@ const keys = {
 let scale = 1
 
 const grid = range(N).map(i => range(N).map(j => {
-  const node = { color: 'green', fill: 0, growth: 0, x: j, y: i }
+  const node = { color: 'green', fill: Math.random(), growth: 0, x: j, y: i }
   node.edges = []
   node.neighbors = []
   return node
@@ -96,8 +96,9 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  plant()
-  console.log(mouse.node.fill, mouse.node.growth)
+  if (e.button === 0) mouse.node.color = 'blue'
+  if (e.button === 2) mouse.node.color = 'green'
+  console.log(mouse.node)
 }
 
 window.onmouseup = function (e) {
@@ -115,17 +116,25 @@ window.onkeyup = function (e) {
 }
 
 function update () {
-  const dt = 0.25
+  const dt = 0.01
   edges.forEach(edge => {
-    edge.flow = (edge.a.fill - edge.b.fill)
+    edge.flow += dt * (edge.a.fill - edge.b.fill)
+    edge.flow = clamp(-0.2, 0.2, edge.flow)
   })
   edges.forEach(edge => {
-    edge.a.fill -= dt * edge.flow
-    edge.b.fill += dt * edge.flow
+    const flow = clamp(-0.2 * edge.b.fill, 0.2 * edge.a.fill, edge.flow)
+    edge.a.fill -= flow
+    edge.b.fill += flow
   })
-  if (mouse.down[0]) mouse.node.growth = mouse.node.growth + 0.1
-  if (mouse.down[2]) mouse.node.growth = mouse.node.growth - 0.1
-  nodes.forEach(node => { node.fill = clamp(0, 1, node.fill + node.growth) })
+  nodes.forEach(node => {
+    if (node.color === 'green') {
+      node.growth = dt * (0.01 + node.fill)
+    } else {
+      node.growth = -dt
+    }
+    node.fill = clamp(0, 1, node.fill + node.growth)
+    if (node.fill < 0.1) node.color = 'green'
+  })
 }
 
 function setupCanvas () {
@@ -164,4 +173,4 @@ function draw () {
 }
 
 draw()
-setInterval(update, 100)
+setInterval(update, 20)
