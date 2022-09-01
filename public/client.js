@@ -6,15 +6,13 @@ const context1 = canvas1.getContext('2d')
 const N = 8
 const L = N - 1
 const tickInterval = 100
-const year = 20
-const tilt = 2 * Math.random() - 1
 
 const canvas0 = new OffscreenCanvas(N, N)
 const context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
 function range (n) { return [...Array(n).keys()] }
-function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
+// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 // const sum = array => array.reduce((a, b) => a + b, 0)
 
 // Disable Right Click Menu
@@ -36,10 +34,14 @@ const state = {
 }
 
 const grid = range(N).map(i => range(N).map(j => {
-  const node = { color: 'green', fill: 0.5, growth: 0, x: j, y: i }
-  node.season = 0
+  const node = { x: j, y: i }
+  node.color = 'green'
+  node.fill = 1
+  node.newColor = node.color
+  node.newFill = node.fill
   node.edges = []
   node.neighbors = []
+  node.count = {}
   return node
 }))
 const nodes = grid.flat()
@@ -81,18 +83,8 @@ function updateMouse (e) {
   }
 }
 
-function plant () {
-  if (mouse.down[0]) {
-    mouse.node.state = 'blue'
-  }
-  if (mouse.down[2]) {
-    mouse.node.state = 'red'
-  }
-}
-
 window.onmousemove = function (e) {
   updateMouse(e)
-  plant()
 }
 
 window.onmousedown = function (e) {
@@ -103,12 +95,12 @@ window.onmousedown = function (e) {
   console.log(mouse.node)
   const oldColor = mouse.node.color
   if (e.button === 0) {
-    if (oldColor === 'green') mouse.node.color = 'blue'
-    if (oldColor === 'blue') mouse.node.color = 'green'
+    if (oldColor === 'green') { mouse.node.color = 'blue' }
+    if (oldColor === 'blue') { mouse.node.color = 'green' }
   }
   if (e.button === 2) {
-    if (oldColor === 'green') mouse.node.color = 'red'
-    if (oldColor === 'red') mouse.node.color = 'green'
+    if (oldColor === 'green') { mouse.node.color = 'red' }
+    if (oldColor === 'red') { mouse.node.color = 'green' }
   }
 }
 
@@ -129,37 +121,34 @@ window.onkeyup = function (e) {
 function update () {
   const dt = tickInterval / 1000
   state.time += dt
-  range(30).forEach(i => {
-    edges.forEach(edge => {
-      const maxFlow = 0.25 * edge.a.fill
-      const minFlow = -0.25 * edge.b.fill
-      edge.flow += 0.1 * dt * (edge.a.fill - edge.b.fill)
-      if (edge.a.color === edge.b.color) {
-        edge.flow = clamp(minFlow, maxFlow, edge.flow)
-      } else if (edge.a.color === 'green') {
-        edge.flow = clamp(0, maxFlow, edge.flow)
-      } else if (edge.b.color === 'green') {
-        edge.flow = clamp(minFlow, 0, edge.flow)
-      } else {
-        edge.flow = 0
-      }
-    })
-    edges.forEach(edge => {
-      edge.a.fill -= edge.flow
-      edge.b.fill += edge.flow
-    })
+  nodes.forEach(node => {
+    node.count = {}
+    for (const color in colors) node.count[color] = 0
+    for (const neighbor of node.neighbors) {
+      node.count[neighbor.color] += 1
+    }
   })
   nodes.forEach(node => {
-    if (node.color === 'green') {
-      const nodeTime = 2 * state.time / year + 0.1 * node.y / N
-      node.season = Math.sin(2 * Math.PI * nodeTime)
-      node.growth = dt * 0.5
-    } else {
-      node.growth = -dt * 0.5
-      node.capacity = 1
+    node.newColor = node.color
+    node.newFill = node.fill
+    const size = 8
+    const step = 1 / size
+    if (['blue', 'red'].includes(node.color)) {
+      const fills = node.neighbors.map(neighbor => {
+        return ['green', node.color].includes(neighbor.color) ? neighbor.fill - step : 0
+      })
+      node.newFill = Math.max(...fills)
+      if (node.newFill <= step) {
+        node.newColor = 'green'
+        node.newFill = step
+      }
+    } else if (node.color === 'green') {
+      node.newFill = (size - 4 + node.count.green) * step
     }
-    node.fill = clamp(0, 1, node.fill + node.growth)
-    if (node.fill < 0.1) node.color = 'green'
+  })
+  nodes.forEach(node => {
+    node.color = node.newColor
+    node.fill = node.newFill
   })
 }
 
@@ -175,16 +164,20 @@ function setupCanvas () {
   context1.imageSmoothingEnabled = false
 }
 
+const colors = {
+  red: { r: 1, b: 0, g: 0 },
+  green: { r: 0, b: 0, g: 1 },
+  blue: { r: 0, b: 1, g: 0 }
+}
+
 function drawState () {
   const imageData = context0.createImageData(N, N)
   range(N * N).forEach(i => {
     const node = nodes[i]
-    const red = (node.color === 'red') * node.fill
-    const green = (node.color === 'green') * node.fill
-    const blue = (node.color === 'blue') * node.fill
-    imageData.data[i * 4 + 0] = 255 * red
-    imageData.data[i * 4 + 1] = 255 * green
-    imageData.data[i * 4 + 2] = 255 * blue
+    const color = colors[node.color]
+    imageData.data[i * 4 + 0] = 255 * color.r * node.fill
+    imageData.data[i * 4 + 1] = 255 * color.g * node.fill
+    imageData.data[i * 4 + 2] = 255 * color.b * node.fill
     imageData.data[i * 4 + 3] = 255
   })
   context0.putImageData(imageData, 0, 0)
