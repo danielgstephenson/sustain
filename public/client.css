@@ -8,7 +8,7 @@ body {
   align-items: center;
 }
 canvas { 
-  margin-top: 2vmin;
-  border: 1px solid white;
-  background: white;
+  margin-top: 0vmin;
+  border: 0px solid black;
+  background: black;
 }

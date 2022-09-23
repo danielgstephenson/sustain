@@ -1,17 +1,20 @@
-/* global OffscreenCanvas */
+import { io } from './socketIo/socket.io.esm.min.js'
+const socket = io()
+const canvas = document.getElementById('canvas')
+const context = canvas.getContext('2d')
+context.imageSmoothingEnabled = false
 
-const canvas1 = document.getElementById('canvas')
-const context1 = canvas1.getContext('2d')
+socket.on('updateClient', (msg) => {
+  record.msg = msg
+  for (const property in msg.state) {
+    state[property] = msg.state[property]
+  }
+  camera.position = msg.position
+  const reply = { controls }
+  socket.emit('updateServer', reply)
+})
 
-const N = 8
-const L = N - 1
-const tickInterval = 100
-
-const canvas0 = new OffscreenCanvas(N, N)
-const context0 = canvas0.getContext('2d')
-context0.imageSmoothingEnabled = false
-
-function range (n) { return [...Array(n).keys()] }
+// function range (n) { return [...Array(n).keys()] }
 // function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 // const sum = array => array.reduce((a, b) => a + b, 0)
 
@@ -20,67 +23,39 @@ document.oncontextmenu = () => false
 
 const mouse = {
   down: [false, false, false],
-  loc: [0, 0],
   x: 0,
-  y: 0,
-  node: {}
+  y: 0
 }
-const keys = {
-  shift: false
+const controls = {
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+  select: false,
+  zoom: 1
 }
-const state = {
-  time: 0,
-  scale: 1
-}
+const record = {}
+const keys = new Map()
+keys.set('w', 'up')
+keys.set('s', 'down')
+keys.set('a', 'left')
+keys.set('d', 'right')
+keys.set('ArrowUp', 'up')
+keys.set('ArrowDown', 'down')
+keys.set('ArrowLeft', 'left')
+keys.set('ArrowRight', 'right')
+keys.set(' ', 'select')
+keys.set('Enter', 'select')
 
-const grid = range(N).map(i => range(N).map(j => {
-  const node = { x: j, y: i }
-  node.color = 'green'
-  node.fill = 1
-  node.newColor = node.color
-  node.newFill = node.fill
-  node.edges = []
-  node.neighbors = []
-  node.count = {}
-  return node
-}))
-const nodes = grid.flat()
-range(N).forEach(i => range(N).forEach(j => {
-  const node = grid[i][j]
-  if (i < L) node.neighbors.push(grid[i + 1][j])
-  if (i > 0) node.neighbors.push(grid[i - 1][j])
-  if (j < L) node.neighbors.push(grid[i][j + 1])
-  if (j > 0) node.neighbors.push(grid[i][j - 1])
-}))
-const edges = []
-range(N).forEach(i => range(N).forEach(j => {
-  if (i < L) {
-    const a = grid[i][j]
-    const b = grid[i + 1][j]
-    const edge = { a, b, flow: 0 }
-    edges.push(edge)
-    a.edges.push(edge)
-    b.edges.push(edge)
-  }
-  if (j < L) {
-    const a = grid[i][j]
-    const b = grid[i][j + 1]
-    const edge = { a, b, flow: 0 }
-    edges.push(edge)
-    a.edges.push(edge)
-    b.edges.push(edge)
-  }
-}))
-console.log(edges)
+const camera = {
+  position: { x: 50, y: 50 }
+}
+const state = {}
 
 function updateMouse (e) {
-  const cx = canvas1.getBoundingClientRect().left
-  const cy = canvas1.getBoundingClientRect().top
-  mouse.y = Math.floor((e.pageY - cy) * N / state.scale)
-  mouse.x = Math.floor((e.pageX - cx) * N / state.scale)
-  if (mouse.x >= 0 && mouse.x < N && mouse.y >= 0 && mouse.y < N) {
-    mouse.node = grid[mouse.y][mouse.x]
-  }
+  const canvasRect = canvas.getBoundingClientRect()
+  mouse.y = Math.floor((e.pageY - canvasRect.top) * 100 / canvasRect.width)
+  mouse.x = Math.floor((e.pageX - canvasRect.left) * 100 / canvasRect.width)
 }
 
 window.onmousemove = function (e) {
@@ -88,20 +63,12 @@ window.onmousemove = function (e) {
 }
 
 window.onmousedown = function (e) {
+  console.log('state', state)
+  console.log('controls', controls)
   if (e.button === 0) mouse.down[0] = true
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log(mouse.node)
-  const oldColor = mouse.node.color
-  if (e.button === 0) {
-    if (oldColor === 'green') { mouse.node.color = 'blue' }
-    if (oldColor === 'blue') { mouse.node.color = 'green' }
-  }
-  if (e.button === 2) {
-    if (oldColor === 'green') { mouse.node.color = 'red' }
-    if (oldColor === 'red') { mouse.node.color = 'green' }
-  }
 }
 
 window.onmouseup = function (e) {
@@ -111,78 +78,83 @@ window.onmouseup = function (e) {
 }
 
 window.onkeydown = function (e) {
-  if (e.key === 'Shift') keys.shift = true
+  keys.forEach((value, key) => {
+    if (e.key === key) controls[value] = true
+  })
 }
 
 window.onkeyup = function (e) {
-  if (e.key === 'Shift') keys.shift = false
+  keys.forEach((value, key) => {
+    if (e.key === key) controls[value] = false
+  })
 }
 
-function update () {
-  const dt = tickInterval / 1000
-  state.time += dt
-  nodes.forEach(node => {
-    node.count = {}
-    for (const color in colors) node.count[color] = 0
-    for (const neighbor of node.neighbors) {
-      node.count[neighbor.color] += 1
-    }
-  })
-  nodes.forEach(node => {
-    node.newColor = node.color
-    node.newFill = node.fill
-    const size = 8
-    const step = 1 / size
-    if (['blue', 'red'].includes(node.color)) {
-      const fills = node.neighbors.map(neighbor => {
-        return ['green', node.color].includes(neighbor.color) ? neighbor.fill - step : 0
-      })
-      node.newFill = Math.max(...fills)
-      if (node.newFill <= step) {
-        node.newColor = 'green'
-        node.newFill = step
-      }
-    } else if (node.color === 'green') {
-      node.newFill = (size - 4 + node.count.green) * step
-    }
-  })
-  nodes.forEach(node => {
-    node.color = node.newColor
-    node.fill = node.newFill
-  })
+window.onwheel = function (e) {
+  controls.zoom -= e.deltaY / 1000
+  console.log('controls.zoom', controls.zoom)
 }
 
 function setupCanvas () {
-  state.scale = 0.95 * Math.min(window.innerHeight, window.innerWidth)
-  canvas1.width = state.scale
-  canvas1.height = state.scale
-  const xTranslate = 0
-  const yTranslate = 0
-  const xScale = state.scale / N
-  const yScale = state.scale / N
-  context1.setTransform(xScale, 0, 0, yScale, xTranslate, yTranslate)
-  context1.imageSmoothingEnabled = false
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+  const xTranslate = 0.5 * window.innerWidth
+  const yTranslate = 0.5 * window.innerHeight
+  const scale = Math.exp(controls.zoom)
+  const minSize = Math.min(window.innerHeight, window.innerWidth)
+  const xScale = scale * minSize / 100
+  const yScale = scale * minSize / 100
+  context.setTransform(xScale, 0, 0, yScale, xTranslate, yTranslate)
+  context.imageSmoothingEnabled = true
 }
 
 const colors = {
-  red: { r: 1, b: 0, g: 0 },
-  green: { r: 0, b: 0, g: 1 },
-  blue: { r: 0, b: 1, g: 0 }
+  0: 'hsl(180, 100%, 50%)',
+  1: 'hsl(220, 100%, 52%)',
+  2: 'hsl(140, 100%, 35%)',
+  wall: 'hsl(180, 10%, 10%)'
 }
 
 function drawState () {
-  const imageData = context0.createImageData(N, N)
-  range(N * N).forEach(i => {
-    const node = nodes[i]
-    const color = colors[node.color]
-    imageData.data[i * 4 + 0] = 255 * color.r * node.fill
-    imageData.data[i * 4 + 1] = 255 * color.g * node.fill
-    imageData.data[i * 4 + 2] = 255 * color.b * node.fill
-    imageData.data[i * 4 + 3] = 255
-  })
-  context0.putImageData(imageData, 0, 0)
-  context1.clearRect(0, 0, 100, 100)
-  context1.drawImage(canvas0, 0, 0)
+  context.clearRect(0, 0, 100, 100)
+  if (state.nodes) {
+    context.fillStyle = colors[0]
+    context.globalAlpha = 1
+    state.nodes.forEach(node => {
+      context.beginPath()
+      const x = node.position.x - camera.position.x
+      const y = node.position.y - camera.position.y
+      context.arc(x, y, node.radius, 0, 2 * Math.PI)
+      context.fill()
+    })
+    context.globalAlpha = 0.05
+    state.nodes.forEach(node => {
+      context.beginPath()
+      const x = node.position.x - camera.position.x
+      const y = node.position.y - camera.position.y
+      context.arc(x, y, node.range, 0, 2 * Math.PI)
+      context.fill()
+    })
+  }
+  if (state.walls) {
+    context.globalAlpha = 1
+    context.fillStyle = colors.wall
+    state.walls.forEach(wall => {
+      const x = wall.position.x - 0.5 * wall.width - camera.position.x
+      const y = wall.position.y - 0.5 * wall.height - camera.position.y
+      context.fillRect(x, y, wall.width, wall.height)
+    })
+  }
+  if (state.players) {
+    context.globalAlpha = 1
+    state.players.forEach(player => {
+      context.fillStyle = colors[player.team]
+      context.beginPath()
+      const x = player.position.x - camera.position.x
+      const y = player.position.y - camera.position.y
+      context.arc(x, y, player.radius, 0, 2 * Math.PI)
+      context.fill()
+    })
+  }
 }
 
 function draw () {
@@ -192,5 +164,3 @@ function draw () {
 }
 
 draw()
-
-setInterval(update, tickInterval)
