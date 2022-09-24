@@ -6,7 +6,7 @@ import path from 'path'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'url'
 import { getLength, getDist } from './vector.js'
-import { checkPlayerWall, checkPlayerNode } from './collision.js'
+import { checkPlayerWall, checkPlayerNode, checkPlayerPlayer } from './collision.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,7 +49,7 @@ function range (n) { return [...Array(n).keys()] }
 const tickInterval = 10
 const dt = tickInterval / 1000
 const playerForce = 50
-const playerTopSpeed = 20
+const playerTopSpeed = 30
 const wallThickness = 10
 const mapSize = 100
 const playerSize = 0.5
@@ -89,10 +89,11 @@ range(100000).forEach(i => {
     x: (Math.random() - 0.5) * (mapSize - 4 * nodeSize),
     y: (Math.random() - 0.5) * (mapSize - 4 * nodeSize)
   }
-  const spread = 1.5 * nodeRange
   const nodeDistances = state.nodes.map(node => getDist(position, node.position))
   const minNodeDist = Math.min(...nodeDistances, Infinity)
-  if (minNodeDist > spread) {
+  const edgeDistances = nodeDistances.map(dist => Math.abs(dist - 2 * nodeRange))
+  const minEdgeDist = Math.min(...edgeDistances)
+  if (minNodeDist > 1.5 * nodeRange && minEdgeDist > 0.2 * nodeRange) {
     const node = {
       position,
       radius: nodeSize,
@@ -117,6 +118,9 @@ function collide () {
     })
     state.nodes.forEach(node => {
       checkPlayerNode(player, node)
+    })
+    players.forEach(other => {
+      checkPlayerPlayer(player, other)
     })
   })
 }
@@ -164,7 +168,7 @@ io.on('connection', socket => {
     id: socket.id,
     team: teamCount1 > teamCount2 ? 2 : 1,
     position: { x: 0, y: 0 },
-    velocity: { x: 0, y: 0 },
+    velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
     force: { x: 0, y: 0 },
     radius: playerSize
   }

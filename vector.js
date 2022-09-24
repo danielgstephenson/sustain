@@ -35,7 +35,7 @@ export function add (a, b) {
   }
 }
 
-export function subtract (a, b) {
+export function sub (a, b) {
   return {
     x: a.x - b.x,
     y: a.y - b.y
@@ -43,7 +43,7 @@ export function subtract (a, b) {
 }
 
 export function dot (a, b) {
-  return a.x * b.x + a.y + b.y
+  return a.x * b.x + a.y * b.y
 }
 
 export function project (a, b) {

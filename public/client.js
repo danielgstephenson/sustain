@@ -32,7 +32,7 @@ const controls = {
   left: false,
   right: false,
   select: false,
-  zoom: 1
+  zoom: 1.5
 }
 const record = {}
 const keys = new Map()
