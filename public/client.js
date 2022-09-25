@@ -64,7 +64,7 @@ window.onmousemove = function (e) {
 
 window.onmousedown = function (e) {
   console.log('state', state)
-  console.log('controls', controls)
+  // console.log('controls', controls)
   if (e.button === 0) mouse.down[0] = true
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
@@ -91,7 +91,6 @@ window.onkeyup = function (e) {
 
 window.onwheel = function (e) {
   controls.zoom -= e.deltaY / 1000
-  console.log('controls.zoom', controls.zoom)
 }
 
 function setupCanvas () {
@@ -108,30 +107,31 @@ function setupCanvas () {
 }
 
 const colors = {
-  0: 'hsl(180, 100%, 50%)',
-  1: 'hsl(220, 100%, 52%)',
-  2: 'hsl(140, 100%, 35%)',
+  0: 'hsl(180, 10%, 50%)',
+  1: 'hsl(220, 100%, 50%)',
+  2: 'hsl(140, 100%, 30%)',
   wall: 'hsl(180, 10%, 10%)'
 }
 
 function drawState () {
   context.clearRect(0, 0, 100, 100)
   if (state.nodes) {
-    context.fillStyle = colors[0]
-    context.globalAlpha = 1
-    state.nodes.forEach(node => {
-      context.beginPath()
-      const x = node.position.x - camera.position.x
-      const y = node.position.y - camera.position.y
-      context.arc(x, y, node.radius, 0, 2 * Math.PI)
-      context.fill()
-    })
     context.globalAlpha = 0.05
     state.nodes.forEach(node => {
       context.beginPath()
+      context.fillStyle = colors[node.team]
       const x = node.position.x - camera.position.x
       const y = node.position.y - camera.position.y
       context.arc(x, y, node.range, 0, 2 * Math.PI)
+      context.fill()
+    })
+    context.globalAlpha = 1
+    state.nodes.forEach(node => {
+      context.beginPath()
+      context.fillStyle = colors[node.team]
+      const x = node.position.x - camera.position.x
+      const y = node.position.y - camera.position.y
+      context.arc(x, y, node.radius, 0, 2 * Math.PI)
       context.fill()
     })
   }
@@ -148,10 +148,15 @@ function drawState () {
     context.globalAlpha = 1
     state.players.forEach(player => {
       context.fillStyle = colors[player.team]
-      context.beginPath()
       const x = player.position.x - camera.position.x
       const y = player.position.y - camera.position.y
+      context.beginPath()
       context.arc(x, y, player.radius, 0, 2 * Math.PI)
+      context.fill()
+      context.fillStyle = 'black'
+      const holeRadius = 0.8 * player.radius * Math.sqrt(1 - player.fill)
+      context.beginPath()
+      context.arc(x, y, holeRadius, 0, 2 * Math.PI)
       context.fill()
     })
   }

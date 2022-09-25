@@ -42,6 +42,14 @@ export function sub (a, b) {
   }
 }
 
+export function getArrow (a, b) {
+  return sub(b, a)
+}
+
+export function getDirection (a, b) {
+  return normalize(getArrow(a, b))
+}
+
 export function dot (a, b) {
   return a.x * b.x + a.y * b.y
 }
@@ -50,4 +58,8 @@ export function project (a, b) {
   if (dot(b, b) === 0) return { x: 0, y: 0 }
   const scale = dot(a, b) / dot(b, b)
   return mult(b, scale)
+}
+
+export function copyVector (vector) {
+  return { x: vector.x, y: vector.y }
 }
