@@ -50,17 +50,8 @@ export function collideActorActor (a, b) {
 }
 
 function onCollidePlayerAttacker (player, attacker, state) {
-  if (state.players.length === 1) attacker.freezeTimer = 2
+  attacker.freezeTimer = 0.5
   player.buildTimer = 0
-  const max = { buildTimer: 0 }
-  if (state.players.length > 1) {
-    state.players.forEach(otherPlayer => {
-      if (otherPlayer.buildTimer > max.buildTimer) {
-        max.buildTimer = otherPlayer.buildTimer
-        attacker.prey = otherPlayer
-      }
-    })
-  }
 }
 
 export function getEdges (state) {
