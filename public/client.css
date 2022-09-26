@@ -9,6 +9,22 @@ body {
 }
 canvas { 
   margin-top: 0vmin;
-  border: 0px solid black;
+  border: 1px solid hsl(180, 10%, 10%);
   background: black;
+}
+#mainDiv {
+  display: flex;
+  justify-content: center;
+}
+#blueDiv {
+  width: 100%;
+  color: hsl(220, 100%, 50%);
+  margin-top: 20vh;
+  font-size: 10vw;
+}
+#greenDiv {
+  width: 100%;
+  color: hsl(140, 100%, 30%);
+  margin-top: 20vh;
+  font-size: 10vw;
 }

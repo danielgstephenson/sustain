@@ -1,4 +1,4 @@
-import { getDist, sub, getLength, mult, add, normalize, project } from './vector.js'
+import { getDist, sub, mult, add, normalize, project } from './vector.js'
 
 export function checkActorWall (player, wall) {
   const overlapX = 0.5 * wall.width + player.radius - Math.abs(player.position.x - wall.position.x)
@@ -28,6 +28,7 @@ export function checkActorNode (player, node) {
   const dist = getDist(player.position, node.position)
   const overlap = player.radius + node.radius - dist
   if (overlap < 0) return false
+  /*
   const vector = sub(player.position, node.position)
   const direction = normalize(vector)
   const push = mult(direction, overlap)
@@ -37,6 +38,7 @@ export function checkActorNode (player, node) {
   if (bounce) {
     player.velocity = mult(direction, 0.7 * getLength(player.velocity))
   }
+  */
   return true
 }
 
@@ -146,7 +148,8 @@ export function collide (state) {
     const neutralNode = node.team === 0
     if (collision && buildReady && neutralNode) {
       node.team = player.team
-      player.fill = 0
+      state.buildTimers[player.team] = 0
+      node.fill = 1
     }
   })
   pairs.playerWall.forEach(pair => {

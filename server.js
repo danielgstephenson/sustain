@@ -5,7 +5,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'url'
-import { getLength, getDist, copyVector, mult, getDirection } from './vector.js'
+import { getLength, getDist, copyVector, getDirection } from './vector.js'
 import { collide } from './collision.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -49,16 +49,16 @@ function range (n) { return [...Array(n).keys()] }
 const dt = 0.01
 const playerForce = 50
 const playerTopSpeed = 30
-const unitSpeed = 50
-const wallThickness = 10
-const mapSize = 100
-const playerSize = 0.5
+const unitSpeed = 40
+const mapSize = 150
+const playerSize = 1
+const unitSize = 0.25
 const nodeSize = 3
 const nodeRange = 10
-const growthInterval = 2
-const deathInterval = 6
-const buildInterval = 8
-const gatherInterval = 0.5
+const growthInterval = 3
+const deathInterval = 3
+const buildInterval = 3
+const gatherInterval = 0.01
 
 const buildRate = 1 / buildInterval
 const deathRate = 1 / deathInterval
@@ -66,6 +66,7 @@ const growthRate = 1 / growthInterval
 
 const state = {
   time: 0,
+  buildTimers: { 1: 0, 2: 0 },
   players: [],
   nodes: [],
   walls: [],
@@ -74,38 +75,43 @@ const state = {
 const players = new Map()
 const sockets = new Map()
 const units = new Map()
+
+const wallThickness = 10
+const wallPadding = 40
+const wallLength = mapSize + wallPadding
 const topWall = {
-  position: { x: 0, y: -0.5 * mapSize - 0.5 * wallThickness },
-  width: mapSize + 2 * wallThickness,
+  position: { x: 0, y: -0.5 * wallLength },
+  width: wallLength + wallThickness,
   height: wallThickness,
   id: state.walls.length,
   role: 'wall'
 }
 state.walls.push(topWall)
 const bottomWall = {
-  position: { x: 0, y: 0.5 * mapSize + 0.5 * wallThickness },
-  width: mapSize + 2 * wallThickness,
+  position: { x: 0, y: 0.5 * wallLength },
+  width: wallLength + wallThickness,
   height: wallThickness,
   id: state.walls.length,
   role: 'wall'
 }
 state.walls.push(bottomWall)
 const leftWall = {
-  position: { x: -0.5 * mapSize - 0.5 * wallThickness, y: 0 },
+  position: { x: -0.5 * wallLength, y: 0 },
   width: wallThickness,
-  height: mapSize + 2 * wallThickness,
+  height: wallLength + wallThickness,
   id: state.walls.length,
   role: 'wall'
 }
 state.walls.push(leftWall)
 const rightWall = {
-  position: { x: 0.5 * mapSize + 0.5 * wallThickness, y: 0 },
+  position: { x: 0.5 * wallLength, y: 0 },
   width: wallThickness,
-  height: mapSize + 2 * wallThickness,
+  height: wallLength + 0.5 * wallThickness,
   id: state.walls.length,
   role: 'wall'
 }
 state.walls.push(rightWall)
+
 range(100000).forEach(i => {
   const position = {
     x: (Math.random() - 0.5) * (mapSize - 4 * nodeSize),
@@ -115,7 +121,8 @@ range(100000).forEach(i => {
   const minNodeDist = Math.min(...nodeDistances, Infinity)
   const edgeDistances = nodeDistances.map(dist => Math.abs(dist - 2 * nodeRange))
   const minEdgeDist = Math.min(...edgeDistances)
-  if (minNodeDist > 1.5 * nodeRange && minEdgeDist > 0.2 * nodeRange) {
+  const centerDist = getLength(position)
+  if (minNodeDist > 1.5 * nodeRange && minEdgeDist > 0.2 * nodeRange && centerDist > nodeRange) {
     const node = {
       position,
       id: state.nodes.length,
@@ -126,17 +133,32 @@ range(100000).forEach(i => {
       fill: 1,
       income: 0,
       team: 0,
-      role: 'node'
+      role: 'node',
+      neighborIds: []
     }
     state.nodes.push(node)
   }
+})
+range(state.nodes.length).forEach(i => {
+  range(state.nodes.length).forEach(j => {
+    if (i < j) {
+      const a = state.nodes[i]
+      const b = state.nodes[j]
+      const dist = getDist(a.position, b.position)
+      if (dist < 2 * nodeRange) {
+        a.neighborIds.push(b.id)
+        b.neighborIds.push(a.id)
+      }
+    }
+  })
 })
 
 function tick () {
   state.time += dt
   movePlayers()
-  updateClients()
+  moveUnits()
   collide(state)
+  updateClients()
   grow()
   gather()
 }
@@ -146,36 +168,66 @@ function gather () {
     node.gatherTimer -= dt
   })
   state.nodes.forEach(node => {
-    if (node.gatherTimer < 0) node.gatherTimer = gatherInterval
+    if (node.gatherTimer < 0) {
+      node.gatherTimer = gatherInterval
+      const neighbors = node.neighborIds.map(id => state.nodes[id])
+      const amount = 0.1
+      neighbors.forEach(neighbor => {
+        if (neighbor.team === 0 && node.team !== 0 && node.fill + node.income < neighbor.fill) {
+          transfer(neighbor, node, amount)
+        } else if (node.team === neighbor.team && node.fill + node.income < neighbor.fill) {
+          transfer(neighbor, node, amount)
+        }
+      })
+    }
   })
 }
 
-function harvest (fromNode, toNode, amount) {
-  const maxId = Math.max(...units.keys())
-  const direction = getDirection(fromNode, toNode)
+function transfer (fromNode, toNode, amount) {
+  const maxId = Math.max(...units.keys(), 0)
+  fromNode.fill -= amount
+  toNode.income += amount
   const unit = {
     position: copyVector(fromNode.position),
     id: maxId + 1,
-    target: toNode,
-    velocity: mult(direction, unitSpeed)
+    targetId: toNode.id,
+    fill: amount,
+    radius: unitSize
   }
   units.set(unit.id, unit)
 }
 
+function moveUnits () {
+  state.units.forEach(unit => {
+    const target = state.nodes[unit.targetId]
+    const direction = getDirection(unit.position, target.position)
+    unit.position.x += direction.x * unitSpeed * dt
+    unit.position.y += direction.y * unitSpeed * dt
+    const dist = getDist(unit.position, target.position)
+    if (dist < unit.radius + target.radius) {
+      target.fill += unit.fill
+      target.income -= unit.fill
+      units.delete(unit.id)
+    }
+  })
+}
+
 function grow () {
   state.nodes.forEach(node => {
-    if (node.team === 0) {
-      node.fill = node.fill + growthRate * dt
+    if (node.team === 0 && node.fill < 1) {
+      node.fill += growthRate * dt
     } else {
-      node.fill = node.fill - deathRate * dt
+      node.fill -= deathRate * dt
     }
-    if (node.fill < 0) node.team = 0
-    node.fill = Math.max(0, Math.min(1, node.fill))
+    if (node.fill < 0.1) node.team = 0
     node.radius = node.size * Math.sqrt(node.fill)
   })
+  state.buildTimers[1] += buildRate * dt
+  state.buildTimers[1] = Math.max(0, Math.min(1, state.buildTimers[1]))
+  state.buildTimers[2] += buildRate * dt
+  state.buildTimers[2] = Math.max(0, Math.min(1, state.buildTimers[2]))
   players.forEach(player => {
-    player.fill = player.fill + buildRate * dt
-    player.fill = Math.max(0, Math.min(1, player.fill))
+    player.fill = state.buildTimers[player.team]
   })
 }
 
@@ -219,10 +271,11 @@ io.on('connection', socket => {
   state.players = Array.from(players.values())
   const teamCount1 = state.players.filter(player => player.team === 1).length
   const teamCount2 = state.players.filter(player => player.team === 2).length
+  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
   const player = {
     id: socket.id,
-    team: teamCount1 > teamCount2 ? 2 : 1,
-    fill: 0,
+    team: smallTeam,
+    fill: state.buildTimers[smallTeam],
     position: { x: 0, y: 0 },
     velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
     force: { x: 0, y: 0 },

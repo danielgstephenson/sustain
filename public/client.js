@@ -1,5 +1,8 @@
 import { io } from './socketIo/socket.io.esm.min.js'
 const socket = io()
+
+const blueDiv = document.getElementById('blueDiv')
+const greenDiv = document.getElementById('greenDiv')
 const canvas = document.getElementById('canvas')
 const context = canvas.getContext('2d')
 context.imageSmoothingEnabled = false
@@ -32,7 +35,7 @@ const controls = {
   left: false,
   right: false,
   select: false,
-  zoom: 1.5
+  zoom: 1
 }
 const record = {}
 const keys = new Map()
@@ -94,10 +97,11 @@ window.onwheel = function (e) {
 }
 
 function setupCanvas () {
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
-  const xTranslate = 0.5 * window.innerWidth
-  const yTranslate = 0.5 * window.innerHeight
+  const size = 0.99 * Math.min(window.innerWidth, window.innerHeight)
+  canvas.width = size
+  canvas.height = size
+  const xTranslate = 0.5 * canvas.width
+  const yTranslate = 0.5 * canvas.height
   const scale = Math.exp(controls.zoom)
   const minSize = Math.min(window.innerHeight, window.innerWidth)
   const xScale = scale * minSize / 100
@@ -115,9 +119,26 @@ const colors = {
 
 function drawState () {
   context.clearRect(0, 0, 100, 100)
+  if (state.units) {
+    context.globalAlpha = 1
+    state.units.forEach(unit => {
+      context.beginPath()
+      context.fillStyle = colors[0]
+      const x = unit.position.x - camera.position.x
+      const y = unit.position.y - camera.position.y
+      context.arc(x, y, unit.radius, 0, 2 * Math.PI)
+      context.fill()
+    })
+  }
   if (state.nodes) {
     context.globalAlpha = 0.05
+    const counts = {
+      blue: 0,
+      green: 0
+    }
     state.nodes.forEach(node => {
+      if (node.team === 1) counts.blue += 1
+      if (node.team === 2) counts.green += 1
       context.beginPath()
       context.fillStyle = colors[node.team]
       const x = node.position.x - camera.position.x
@@ -125,6 +146,8 @@ function drawState () {
       context.arc(x, y, node.range, 0, 2 * Math.PI)
       context.fill()
     })
+    blueDiv.innerHTML = counts.blue
+    greenDiv.innerHTML = counts.green
     context.globalAlpha = 1
     state.nodes.forEach(node => {
       context.beginPath()
