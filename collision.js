@@ -1,54 +1,42 @@
-import { getDist, sub, mult, add, normalize, project } from './vector.js'
+import { getDist, sub, mult, add, norm, project } from './vector.js'
 
-export function checkActorWall (player, wall) {
-  const overlapX = 0.5 * wall.width + player.radius - Math.abs(player.position.x - wall.position.x)
-  const overlapY = 0.5 * wall.height + player.radius - Math.abs(player.position.y - wall.position.y)
+export function collideActorWall (actor, wall) {
+  const overlapX = 0.5 * wall.width + actor.radius - Math.abs(actor.position.x - wall.position.x)
+  const overlapY = 0.5 * wall.height + actor.radius - Math.abs(actor.position.y - wall.position.y)
   const minOverlap = Math.min(overlapX, overlapY)
   if (minOverlap < 0) return false
   if (overlapX < overlapY) {
-    const sign = Math.sign(player.position.x - wall.position.x)
-
-    player.position.x += sign * overlapX * 1.01
-    player.velocity = {
-      x: sign * Math.abs(player.velocity.x),
-      y: player.velocity.y
+    const sign = Math.sign(actor.position.x - wall.position.x)
+    actor.position.x += sign * overlapX * 1.01
+    actor.velocity = {
+      x: 0,
+      y: actor.velocity.y
     }
   } else {
-    const sign = Math.sign(player.position.y - wall.position.y)
-    player.position.y += sign * overlapY * 1.01
-    player.velocity = {
-      x: player.velocity.x,
-      y: sign * Math.abs(player.velocity.y)
+    const sign = Math.sign(actor.position.y - wall.position.y)
+    actor.position.y += sign * overlapY * 1.01
+    actor.velocity = {
+      x: actor.velocity.x,
+      y: 0
     }
   }
   return true
 }
 
-export function checkActorNode (player, node) {
-  const dist = getDist(player.position, node.position)
-  const overlap = player.radius + node.radius - dist
+export function collideActorNode (actor, node) {
+  const dist = getDist(actor.position, node.position)
+  const overlap = actor.radius + node.radius - dist
   if (overlap < 0) return false
-  /*
-  const vector = sub(player.position, node.position)
-  const direction = normalize(vector)
-  const push = mult(direction, overlap)
-  player.position.x += push.x * 1.01
-  player.position.y += push.y * 1.01
-  const bounce = Math.min(getLength(direction), getLength(player.velocity)) > 0
-  if (bounce) {
-    player.velocity = mult(direction, 0.7 * getLength(player.velocity))
-  }
-  */
   return true
 }
 
-export function checkActorActor (a, b) {
-  if (a.id === b.id) return false
+export function collideActorActor (a, b) {
+  if (a.id === b.id && a.role === b.role) return false
   const dist = getDist(a.position, b.position)
   const overlap = a.radius + b.radius - dist
   if (overlap < 0) return false
   const vector = sub(a.position, b.position)
-  const direction = normalize(vector)
+  const direction = norm(vector)
   const push = mult(direction, 2 * overlap)
   a.position = add(a.position, push)
   b.position = sub(b.position, push)
@@ -59,6 +47,20 @@ export function checkActorActor (a, b) {
   a.velocity = add(rejectionA, projectionB)
   b.velocity = add(rejectionB, projectionA)
   return true
+}
+
+function onCollidePlayerAttacker (player, attacker, state) {
+  if (state.players.length === 1) attacker.freezeTimer = 2
+  player.buildTimer = 0
+  const max = { buildTimer: 0 }
+  if (state.players.length > 1) {
+    state.players.forEach(otherPlayer => {
+      if (otherPlayer.buildTimer > max.buildTimer) {
+        max.buildTimer = otherPlayer.buildTimer
+        attacker.prey = otherPlayer
+      }
+    })
+  }
 }
 
 export function getEdges (state) {
@@ -100,6 +102,18 @@ export function getEdges (state) {
       x: player.position.x + player.radius
     })
   })
+  state.attackers.forEach(attacker => {
+    edges.push({
+      object: attacker,
+      side: 'left',
+      x: attacker.position.x - attacker.radius - pad
+    })
+    edges.push({
+      object: attacker,
+      side: 'right',
+      x: attacker.position.x + attacker.radius
+    })
+  })
   edges.sort((a, b) => a.x - b.x)
   return edges
 }
@@ -108,25 +122,29 @@ export function collide (state) {
   const edges = getEdges(state)
   const active = {
     players: new Map(),
+    attackers: new Map(),
     walls: new Map(),
     nodes: new Map()
   }
   const pairs = {
-    playerPlayer: [],
-    playerWall: [],
+    actorActor: [],
+    actorWall: [],
     playerNode: []
   }
   edges.forEach(edge => {
     if (edge.side === 'left') {
-      if (edge.object.role === 'player') {
-        const player = edge.object
-        active.players.forEach(other => pairs.playerPlayer.push([player, other]))
-        active.walls.forEach(wall => pairs.playerWall.push([player, wall]))
-        active.nodes.forEach(node => pairs.playerNode.push([player, node]))
-        active.players.set(player.id, player)
+      if (['player', 'attacker'].includes(edge.object.role)) {
+        const actor = edge.object
+        active.players.forEach(player => pairs.actorActor.push([actor, player]))
+        active.attackers.forEach(attacker => pairs.actorActor.push([actor, attacker]))
+        active.walls.forEach(wall => pairs.actorWall.push([actor, wall]))
+        active.nodes.forEach(node => pairs.playerNode.push([actor, node]))
+        if (edge.object.role === 'player') active.players.set(actor.id, actor)
+        if (edge.object.role === 'attacker') active.attackers.set(actor.id, actor)
       } else if (edge.object.role === 'wall') {
         const wall = edge.object
-        active.players.forEach(player => pairs.playerWall.push([player, wall]))
+        active.players.forEach(player => pairs.actorWall.push([player, wall]))
+        active.attackers.forEach(attacker => pairs.actorWall.push([attacker, wall]))
         active.walls.set(wall.id, wall)
       } else if (edge.object.role === 'node') {
         const node = edge.object
@@ -136,6 +154,7 @@ export function collide (state) {
     }
     if (edge.side === 'right') {
       if (edge.object.role === 'player') active.players.delete(edge.object.id)
+      if (edge.object.role === 'attacker') active.attackers.delete(edge.object.id)
       if (edge.object.role === 'wall') active.walls.delete(edge.object.id)
       if (edge.object.role === 'node') active.nodes.delete(edge.object.id)
     }
@@ -143,23 +162,30 @@ export function collide (state) {
   pairs.playerNode.forEach(pair => {
     const player = pair[0]
     const node = pair[1]
-    const collision = checkActorNode(player, node)
-    const buildReady = player.fill === 1
+    const collision = collideActorNode(player, node)
+    const buildReady = player.buildTimer === 1
     const neutralNode = node.team === 0
     if (collision && buildReady && neutralNode) {
       node.team = player.team
-      state.buildTimers[player.team] = 0
+      player.buildTimer = 0
       node.fill = 1
     }
   })
-  pairs.playerWall.forEach(pair => {
+  pairs.actorWall.forEach(pair => {
     const player = pair[0]
     const wall = pair[1]
-    checkActorWall(player, wall)
+    collideActorWall(player, wall)
   })
-  pairs.playerPlayer.forEach(pair => {
-    const player = pair[0]
-    const other = pair[1]
-    checkActorActor(player, other)
+  pairs.actorActor.forEach(pair => {
+    const actorA = pair[0]
+    const actorB = pair[1]
+    if (collideActorActor(actorA, actorB)) {
+      if (actorA.role === 'player' && actorB.role === 'attacker') {
+        onCollidePlayerAttacker(actorA, actorB, state)
+      }
+      if (actorB.role === 'player' && actorA.role === 'attacker') {
+        onCollidePlayerAttacker(actorB, actorA, state)
+      }
+    }
   })
 }

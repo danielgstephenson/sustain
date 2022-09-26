@@ -22,7 +22,7 @@ export function mult (vector, scalar) {
   }
 }
 
-export function normalize (vector) {
+export function norm (vector) {
   const length = getLength(vector)
   if (length === 0) return { x: 0, y: 0 }
   return mult(vector, 1 / length)
@@ -47,7 +47,7 @@ export function getArrow (a, b) {
 }
 
 export function getDirection (a, b) {
-  return normalize(getArrow(a, b))
+  return norm(getArrow(a, b))
 }
 
 export function dot (a, b) {

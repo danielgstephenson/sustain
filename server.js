@@ -5,7 +5,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'url'
-import { getLength, getDist, copyVector, getDirection } from './vector.js'
+import { getLength, getDist, copyVector, getDirection, dot, norm, mult, add, sub } from './vector.js'
 import { collide } from './collision.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -47,11 +47,12 @@ server.listen(config.port, () => {
 function range (n) { return [...Array(n).keys()] }
 
 const dt = 0.01
-const playerForce = 50
+const airFriction = 1
+const actorMovePower = 100
 const playerTopSpeed = 30
 const unitSpeed = 40
 const mapSize = 150
-const playerSize = 1
+const actorSize = 1
 const unitSize = 0.25
 const nodeSize = 3
 const nodeRange = 10
@@ -64,103 +65,86 @@ const buildRate = 1 / buildInterval
 const deathRate = 1 / deathInterval
 const growthRate = 1 / growthInterval
 
+const compass = [
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 0, y: 1 },
+  { x: Math.sqrt(0.5), y: Math.sqrt(0.5) },
+  { x: -Math.sqrt(0.5), y: Math.sqrt(0.5) },
+  { x: Math.sqrt(0.5), y: -Math.sqrt(0.5) },
+  { x: -Math.sqrt(0.5), y: -Math.sqrt(0.5) }
+]
+
 const state = {
   time: 0,
-  buildTimers: { 1: 0, 2: 0 },
   players: [],
   nodes: [],
   walls: [],
-  units: []
+  units: [],
+  attackers: []
 }
 const players = new Map()
+const attackers = new Map()
 const sockets = new Map()
 const units = new Map()
 
-const wallThickness = 10
-const wallPadding = 40
-const wallLength = mapSize + wallPadding
-const topWall = {
-  position: { x: 0, y: -0.5 * wallLength },
-  width: wallLength + wallThickness,
-  height: wallThickness,
-  id: state.walls.length,
-  role: 'wall'
-}
-state.walls.push(topWall)
-const bottomWall = {
-  position: { x: 0, y: 0.5 * wallLength },
-  width: wallLength + wallThickness,
-  height: wallThickness,
-  id: state.walls.length,
-  role: 'wall'
-}
-state.walls.push(bottomWall)
-const leftWall = {
-  position: { x: -0.5 * wallLength, y: 0 },
-  width: wallThickness,
-  height: wallLength + wallThickness,
-  id: state.walls.length,
-  role: 'wall'
-}
-state.walls.push(leftWall)
-const rightWall = {
-  position: { x: 0.5 * wallLength, y: 0 },
-  width: wallThickness,
-  height: wallLength + 0.5 * wallThickness,
-  id: state.walls.length,
-  role: 'wall'
-}
-state.walls.push(rightWall)
+setupWalls()
+setupNodes()
 
-range(100000).forEach(i => {
-  const position = {
-    x: (Math.random() - 0.5) * (mapSize - 4 * nodeSize),
-    y: (Math.random() - 0.5) * (mapSize - 4 * nodeSize)
-  }
-  const nodeDistances = state.nodes.map(node => getDist(position, node.position))
-  const minNodeDist = Math.min(...nodeDistances, Infinity)
-  const edgeDistances = nodeDistances.map(dist => Math.abs(dist - 2 * nodeRange))
-  const minEdgeDist = Math.min(...edgeDistances)
-  const centerDist = getLength(position)
-  if (minNodeDist > 1.5 * nodeRange && minEdgeDist > 0.2 * nodeRange && centerDist > nodeRange) {
-    const node = {
-      position,
-      id: state.nodes.length,
-      size: nodeSize,
-      radius: nodeSize,
-      range: nodeRange,
-      gatherTimer: Math.random() * gatherInterval,
-      fill: 1,
-      income: 0,
-      team: 0,
-      role: 'node',
-      neighborIds: []
-    }
-    state.nodes.push(node)
-  }
-})
-range(state.nodes.length).forEach(i => {
-  range(state.nodes.length).forEach(j => {
-    if (i < j) {
-      const a = state.nodes[i]
-      const b = state.nodes[j]
-      const dist = getDist(a.position, b.position)
-      if (dist < 2 * nodeRange) {
-        a.neighborIds.push(b.id)
-        b.neighborIds.push(a.id)
-      }
-    }
-  })
-})
+const attacker = {
+  id: 0,
+  team: 3,
+  position: { x: 0, y: 0 },
+  velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+  force: { x: 0, y: 0 },
+  radius: actorSize,
+  prey: null,
+  freezeTimer: 0,
+  role: 'attacker'
+}
+attackers.set(0, attacker)
 
 function tick () {
   state.time += dt
   movePlayers()
+  moveAttackers()
   moveUnits()
   collide(state)
   updateClients()
   grow()
   gather()
+  attack()
+}
+
+function attack () {
+  state.attackers.forEach(attacker => {
+    if (attacker.prey) {
+      const preyDirection = getDirection(attacker.position, attacker.prey.position)
+      const preyDistance = getDist(attacker.position, attacker.prey.position)
+      const preyFar = preyDistance > 10
+      const preyFlee = dot(attacker.prey.velocity, preyDirection) > 0
+      const advance = 5 + 20 * preyFar + 20 * !preyFlee
+      const targetVelocity = add(attacker.prey.velocity, mult(preyDirection, advance))
+      const targetForce = sub(targetVelocity, attacker.velocity)
+      // const targetForce = preyDirection
+      const best = { align: 0 }
+      compass.forEach(compassDir => {
+        const align = dot(compassDir, targetForce)
+        if (align > best.align) {
+          best.align = align
+          attacker.force = norm(compassDir)
+        }
+      })
+    } else {
+      const max = { buildTimer: 0 }
+      state.players.forEach(player => {
+        if (player.buildTimer > max.buildTimer) {
+          max.buildTimer = player.buildTimer
+          attacker.prey = player
+        }
+      })
+    }
+  })
 }
 
 function gather () {
@@ -197,6 +181,22 @@ function transfer (fromNode, toNode, amount) {
   units.set(unit.id, unit)
 }
 
+function grow () {
+  state.nodes.forEach(node => {
+    if (node.team === 0 && node.fill < 1) {
+      node.fill += growthRate * dt
+    } else {
+      node.fill -= deathRate * dt
+    }
+    if (node.fill < 0.1) node.team = 0
+    node.radius = node.size * Math.sqrt(node.fill)
+  })
+  players.forEach(player => {
+    player.buildTimer += buildRate * dt
+    player.buildTimer = Math.max(0, Math.min(1, player.buildTimer))
+  })
+}
+
 function moveUnits () {
   state.units.forEach(unit => {
     const target = state.nodes[unit.targetId]
@@ -212,51 +212,125 @@ function moveUnits () {
   })
 }
 
-function grow () {
-  state.nodes.forEach(node => {
-    if (node.team === 0 && node.fill < 1) {
-      node.fill += growthRate * dt
-    } else {
-      node.fill -= deathRate * dt
-    }
-    if (node.fill < 0.1) node.team = 0
-    node.radius = node.size * Math.sqrt(node.fill)
-  })
-  state.buildTimers[1] += buildRate * dt
-  state.buildTimers[1] = Math.max(0, Math.min(1, state.buildTimers[1]))
-  state.buildTimers[2] += buildRate * dt
-  state.buildTimers[2] = Math.max(0, Math.min(1, state.buildTimers[2]))
-  players.forEach(player => {
-    player.fill = state.buildTimers[player.team]
-  })
-}
-
 function movePlayers () {
   state.players.forEach(player => {
     if (player.controls) {
       const dx = player.controls.right - player.controls.left
       const dy = player.controls.down - player.controls.up
-      const magnitude = Math.sqrt(dx * dx + dy * dy)
-      player.force = { x: 0, y: 0 }
-      if (magnitude > 0) {
-        player.force.x = dx / magnitude
-        player.force.y = dy / magnitude
-      }
-      player.velocity.x += player.force.x * dt * playerForce
-      player.velocity.y += player.force.y * dt * playerForce
-      const speed = getLength(player.velocity)
-      if (speed > playerTopSpeed) {
-        player.velocity.x = player.velocity.x * playerTopSpeed / speed
-        player.velocity.y = player.velocity.y * playerTopSpeed / speed
-      }
-      player.position.x += player.velocity.x * dt
-      player.position.y += player.velocity.y * dt
+      player.force = norm({ x: dx, y: dy })
+      moveActor(player)
     }
+  })
+}
+
+function moveAttackers () {
+  state.attackers.forEach(attacker => {
+    if (attacker.freezeTimer <= 0) {
+      moveActor(attacker)
+    } else if (attacker.freezeTimer > 0) {
+      attacker.freezeTimer -= dt
+      attacker.freezeTimer = Math.max(0, attacker.freezeTimer)
+    }
+  })
+}
+
+function moveActor (actor) {
+  actor.velocity.x += actor.force.x * dt * actorMovePower
+  actor.velocity.y += actor.force.y * dt * actorMovePower
+  const speed = getLength(actor.velocity)
+  if (speed > playerTopSpeed) {
+    actor.velocity.x = actor.velocity.x * playerTopSpeed / speed
+    actor.velocity.y = actor.velocity.y * playerTopSpeed / speed
+  }
+  actor.position.x += actor.velocity.x * dt
+  actor.position.y += actor.velocity.y * dt
+  actor.velocity = mult(actor.velocity, 1 - dt * airFriction)
+}
+
+function setupWalls () {
+  const wallThickness = 10
+  const wallPadding = 50
+  const wallLength = mapSize + wallPadding
+  const topWall = {
+    position: { x: 0, y: -0.5 * wallLength },
+    width: wallLength + wallThickness,
+    height: wallThickness,
+    id: state.walls.length,
+    role: 'wall'
+  }
+  state.walls.push(topWall)
+  const bottomWall = {
+    position: { x: 0, y: 0.5 * wallLength },
+    width: wallLength + wallThickness,
+    height: wallThickness,
+    id: state.walls.length,
+    role: 'wall'
+  }
+  state.walls.push(bottomWall)
+  const leftWall = {
+    position: { x: -0.5 * wallLength, y: 0 },
+    width: wallThickness,
+    height: wallLength + wallThickness,
+    id: state.walls.length,
+    role: 'wall'
+  }
+  state.walls.push(leftWall)
+  const rightWall = {
+    position: { x: 0.5 * wallLength, y: 0 },
+    width: wallThickness,
+    height: wallLength + 0.5 * wallThickness,
+    id: state.walls.length,
+    role: 'wall'
+  }
+  state.walls.push(rightWall)
+}
+
+function setupNodes () {
+  range(100000).forEach(i => {
+    const position = {
+      x: (Math.random() - 0.5) * (mapSize - 4 * nodeSize),
+      y: (Math.random() - 0.5) * (mapSize - 4 * nodeSize)
+    }
+    const nodeDistances = state.nodes.map(node => getDist(position, node.position))
+    const minNodeDist = Math.min(...nodeDistances, Infinity)
+    const edgeDistances = nodeDistances.map(dist => Math.abs(dist - 2 * nodeRange))
+    const minEdgeDist = Math.min(...edgeDistances)
+    const centerDist = getLength(position)
+    if (minNodeDist > 1.3 * nodeRange && minEdgeDist > 0.2 * nodeRange && centerDist > nodeRange) {
+      const node = {
+        position,
+        id: state.nodes.length,
+        size: nodeSize,
+        radius: nodeSize,
+        range: nodeRange,
+        gatherTimer: Math.random() * gatherInterval,
+        fill: 1,
+        income: 0,
+        team: 0,
+        role: 'node',
+        neighborIds: []
+      }
+      state.nodes.push(node)
+    }
+  })
+  range(state.nodes.length).forEach(i => {
+    range(state.nodes.length).forEach(j => {
+      if (i < j) {
+        const a = state.nodes[i]
+        const b = state.nodes[j]
+        const dist = getDist(a.position, b.position)
+        if (dist < 2 * nodeRange) {
+          a.neighborIds.push(b.id)
+          b.neighborIds.push(a.id)
+        }
+      }
+    })
   })
 }
 
 async function updateClients () {
   state.players = Array.from(players.values())
+  state.attackers = Array.from(attackers.values())
   state.units = Array.from(units.values())
   players.forEach(player => {
     const socket = sockets.get(player.id)
@@ -275,15 +349,16 @@ io.on('connection', socket => {
   const player = {
     id: socket.id,
     team: smallTeam,
-    fill: state.buildTimers[smallTeam],
+    buildTimer: 0,
     position: { x: 0, y: 0 },
     velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
     force: { x: 0, y: 0 },
-    radius: playerSize,
+    radius: actorSize,
     role: 'player'
   }
   players.set(socket.id, player)
   sockets.set(socket.id, socket)
+  state.attackers.forEach(attacker => { attacker.prey = player })
   socket.on('updateServer', message => {
     player.controls = message.controls
   })
@@ -291,5 +366,10 @@ io.on('connection', socket => {
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
+    state.attackers.forEach(attacker => {
+      if (attacker.prey.id === socket.id) {
+        attacker.prey = null
+      }
+    })
   })
 })

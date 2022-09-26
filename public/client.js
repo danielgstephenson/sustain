@@ -35,7 +35,7 @@ const controls = {
   left: false,
   right: false,
   select: false,
-  zoom: 1
+  zoom: 0.5
 }
 const record = {}
 const keys = new Map()
@@ -177,9 +177,20 @@ function drawState () {
       context.arc(x, y, player.radius, 0, 2 * Math.PI)
       context.fill()
       context.fillStyle = 'black'
-      const holeRadius = 0.8 * player.radius * Math.sqrt(1 - player.fill)
+      const holeRadius = 0.8 * player.radius * Math.sqrt(1 - player.buildTimer)
       context.beginPath()
       context.arc(x, y, holeRadius, 0, 2 * Math.PI)
+      context.fill()
+    })
+  }
+  if (state.attackers) {
+    context.globalAlpha = 1
+    state.attackers.forEach(attacker => {
+      context.fillStyle = 'red'
+      const x = attacker.position.x - camera.position.x
+      const y = attacker.position.y - camera.position.y
+      context.beginPath()
+      context.arc(x, y, attacker.radius, 0, 2 * Math.PI)
       context.fill()
     })
   }
