@@ -109,11 +109,10 @@ function attack () {
     const relativePosition = sub(prey.position, attacker.position)
     const distance = getLength(relativePosition)
     const preyFlee = dot(norm(prey.velocity), norm(relativePosition)) > -0.7
-    const targetApproachSpeed = 5 + distance + 30 * !preyFlee
+    const targetApproachSpeed = 5 + distance + 50 * !preyFlee
     const targetRelativeVelocity = mult(norm(relativePosition), targetApproachSpeed)
     const relativeVelocity = sub(attacker.velocity, prey.velocity)
     const targetForce = sub(targetRelativeVelocity, relativeVelocity)
-    // const targetForce = preyDirection
     const best = { align: 0 }
     compass.forEach(compassDir => {
       const align = dot(compassDir, targetForce)
@@ -343,7 +342,6 @@ io.on('connection', socket => {
     role: 'attacker'
   }
   attackers.set(socket.id, attacker)
-  // state.attackers.forEach(attacker => { attacker.prey = player })
   socket.on('updateServer', message => {
     player.controls = message.controls
   })
@@ -352,12 +350,5 @@ io.on('connection', socket => {
     sockets.delete(socket.id)
     players.delete(socket.id)
     attackers.delete(socket.id)
-    /*
-    state.attackers.forEach(attacker => {
-      if (attacker.prey.id === socket.id) {
-        attacker.prey = null
-      }
-    })
-    */
   })
 })

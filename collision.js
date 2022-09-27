@@ -50,7 +50,7 @@ export function collideActorActor (a, b) {
 }
 
 function onCollidePlayerAttacker (player, attacker, state) {
-  attacker.freezeTimer = 0.5
+  attacker.freezeTimer = 1
   player.buildTimer = 0
 }
 
