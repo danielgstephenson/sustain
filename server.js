@@ -5,7 +5,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'url'
-import { getLength, getDist, copyVector, getDirection, dot, norm, mult, sub } from './vector.js'
+import { getLength, getDist, copyVector, getDirection, dot, project, norm, mult, add, sub } from './vector.js'
 import { collide } from './collision.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -47,8 +47,8 @@ server.listen(config.port, () => {
 function range (n) { return [...Array(n).keys()] }
 
 const dt = 0.01
-const drag = 2
-const actorMovePower = 100
+const drag = 1
+const actorMovePower = 70
 const unitSpeed = 40
 const mapSize = 150
 const actorSize = 1
@@ -81,10 +81,10 @@ const state = {
   nodes: [],
   walls: [],
   units: [],
-  attackers: []
+  predators: []
 }
 const players = new Map()
-const attackers = new Map()
+const predators = new Map()
 const sockets = new Map()
 const units = new Map()
 
@@ -94,31 +94,33 @@ setupNodes()
 function tick () {
   state.time += dt
   movePlayers()
-  moveAttackers()
+  movePredators()
   moveUnits()
   collide(state)
   updateClients()
   grow()
   gather()
-  attack()
+  pursue()
 }
 
-function attack () {
-  state.attackers.forEach(attacker => {
-    const prey = attacker.prey
-    const relativePosition = sub(prey.position, attacker.position)
-    const distance = getLength(relativePosition)
-    const preyFlee = dot(norm(prey.velocity), norm(relativePosition)) > -0.7
-    const targetApproachSpeed = 5 + distance + 50 * !preyFlee
-    const targetRelativeVelocity = mult(norm(relativePosition), targetApproachSpeed)
-    const relativeVelocity = sub(attacker.velocity, prey.velocity)
-    const targetForce = sub(targetRelativeVelocity, relativeVelocity)
+function pursue () {
+  state.predators.forEach(predator => {
+    const prey = predator.prey
+    const preyDir = getDirection(predator.position, prey.position)
+    const projection = project(prey.velocity, preyDir)
+    const rejection = sub(prey.velocity, projection)
+    const flee = 1 * (dot(norm(projection), preyDir) > 0)
+    const fleeVelocity = add(rejection, mult(projection, flee))
+    const distance = getDist(predator.position, prey.position)
+    const advance = 5 + 0.3 * distance
+    const targetVelocity = add(fleeVelocity, mult(preyDir, advance))
+    const targetForce = sub(targetVelocity, predator.velocity)
     const best = { align: 0 }
     compass.forEach(compassDir => {
       const align = dot(compassDir, targetForce)
       if (align > best.align) {
         best.align = align
-        attacker.force = norm(compassDir)
+        predator.force = norm(compassDir)
       }
     })
   })
@@ -200,13 +202,13 @@ function movePlayers () {
   })
 }
 
-function moveAttackers () {
-  state.attackers.forEach(attacker => {
-    if (attacker.freezeTimer <= 0) {
-      moveActor(attacker)
-    } else if (attacker.freezeTimer > 0) {
-      attacker.freezeTimer -= dt
-      attacker.freezeTimer = Math.max(0, attacker.freezeTimer)
+function movePredators () {
+  state.predators.forEach(predator => {
+    if (predator.freezeTimer <= 0) {
+      moveActor(predator)
+    } else if (predator.freezeTimer > 0) {
+      predator.freezeTimer -= dt
+      predator.freezeTimer = Math.max(0, predator.freezeTimer)
     }
   })
 }
@@ -221,7 +223,7 @@ function moveActor (actor) {
 
 function setupWalls () {
   const wallThickness = 10
-  const wallPadding = 50
+  const wallPadding = 200
   const wallLength = mapSize + wallPadding
   const topWall = {
     position: { x: 0, y: -0.5 * wallLength },
@@ -302,7 +304,7 @@ function setupNodes () {
 
 async function updateClients () {
   state.players = Array.from(players.values())
-  state.attackers = Array.from(attackers.values())
+  state.predators = Array.from(predators.values())
   state.units = Array.from(units.values())
   players.forEach(player => {
     const socket = sockets.get(player.id)
@@ -323,25 +325,25 @@ io.on('connection', socket => {
     team: smallTeam,
     buildTimer: 0,
     position: { x: 0, y: 0 },
-    velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+    velocity: { x: 0, y: 0 },
     force: { x: 0, y: 0 },
     radius: actorSize,
     role: 'player'
   }
   players.set(socket.id, player)
   sockets.set(socket.id, socket)
-  const attacker = {
+  const predator = {
     id: socket.id,
     team: 3,
-    position: { x: 0, y: 0 },
-    velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+    position: { x: 0, y: 50 },
+    velocity: { x: 0, y: 0 },
     force: { x: 0, y: 0 },
     radius: actorSize,
     prey: player,
     freezeTimer: 0,
-    role: 'attacker'
+    role: 'predator'
   }
-  attackers.set(socket.id, attacker)
+  predators.set(socket.id, predator)
   socket.on('updateServer', message => {
     player.controls = message.controls
   })
@@ -349,6 +351,6 @@ io.on('connection', socket => {
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
-    attackers.delete(socket.id)
+    predators.delete(socket.id)
   })
 })

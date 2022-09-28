@@ -60,6 +60,10 @@ export function project (a, b) {
   return mult(b, scale)
 }
 
+export function reject (a, b) {
+  return sub(a, project(a, b))
+}
+
 export function copyVector (vector) {
   return { x: vector.x, y: vector.y }
 }

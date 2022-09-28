@@ -183,14 +183,14 @@ function drawState () {
       context.fill()
     })
   }
-  if (state.attackers) {
+  if (state.predators) {
     context.globalAlpha = 1
-    state.attackers.forEach(attacker => {
+    state.predators.forEach(predator => {
       context.fillStyle = 'red'
-      const x = attacker.position.x - camera.position.x
-      const y = attacker.position.y - camera.position.y
+      const x = predator.position.x - camera.position.x
+      const y = predator.position.y - camera.position.y
       context.beginPath()
-      context.arc(x, y, attacker.radius, 0, 2 * Math.PI)
+      context.arc(x, y, predator.radius, 0, 2 * Math.PI)
       context.fill()
     })
   }

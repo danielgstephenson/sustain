@@ -49,8 +49,8 @@ export function collideActorActor (a, b) {
   return true
 }
 
-function onCollidePlayerAttacker (player, attacker, state) {
-  attacker.freezeTimer = 1
+function onCollidePlayerPredator (player, predator, state) {
+  predator.freezeTimer = 1
   player.buildTimer = 0
 }
 
@@ -93,16 +93,16 @@ export function getEdges (state) {
       x: player.position.x + player.radius
     })
   })
-  state.attackers.forEach(attacker => {
+  state.predators.forEach(predator => {
     edges.push({
-      object: attacker,
+      object: predator,
       side: 'left',
-      x: attacker.position.x - attacker.radius - pad
+      x: predator.position.x - predator.radius - pad
     })
     edges.push({
-      object: attacker,
+      object: predator,
       side: 'right',
-      x: attacker.position.x + attacker.radius
+      x: predator.position.x + predator.radius
     })
   })
   edges.sort((a, b) => a.x - b.x)
@@ -113,7 +113,7 @@ export function collide (state) {
   const edges = getEdges(state)
   const active = {
     players: new Map(),
-    attackers: new Map(),
+    predators: new Map(),
     walls: new Map(),
     nodes: new Map()
   }
@@ -124,18 +124,18 @@ export function collide (state) {
   }
   edges.forEach(edge => {
     if (edge.side === 'left') {
-      if (['player', 'attacker'].includes(edge.object.role)) {
+      if (['player', 'predator'].includes(edge.object.role)) {
         const actor = edge.object
         active.players.forEach(player => pairs.actorActor.push([actor, player]))
-        active.attackers.forEach(attacker => pairs.actorActor.push([actor, attacker]))
+        active.predators.forEach(predator => pairs.actorActor.push([actor, predator]))
         active.walls.forEach(wall => pairs.actorWall.push([actor, wall]))
         active.nodes.forEach(node => pairs.playerNode.push([actor, node]))
         if (edge.object.role === 'player') active.players.set(actor.id, actor)
-        if (edge.object.role === 'attacker') active.attackers.set(actor.id, actor)
+        if (edge.object.role === 'predator') active.predators.set(actor.id, actor)
       } else if (edge.object.role === 'wall') {
         const wall = edge.object
         active.players.forEach(player => pairs.actorWall.push([player, wall]))
-        active.attackers.forEach(attacker => pairs.actorWall.push([attacker, wall]))
+        active.predators.forEach(predator => pairs.actorWall.push([predator, wall]))
         active.walls.set(wall.id, wall)
       } else if (edge.object.role === 'node') {
         const node = edge.object
@@ -145,7 +145,7 @@ export function collide (state) {
     }
     if (edge.side === 'right') {
       if (edge.object.role === 'player') active.players.delete(edge.object.id)
-      if (edge.object.role === 'attacker') active.attackers.delete(edge.object.id)
+      if (edge.object.role === 'predator') active.predators.delete(edge.object.id)
       if (edge.object.role === 'wall') active.walls.delete(edge.object.id)
       if (edge.object.role === 'node') active.nodes.delete(edge.object.id)
     }
@@ -171,11 +171,11 @@ export function collide (state) {
     const actorA = pair[0]
     const actorB = pair[1]
     if (collideActorActor(actorA, actorB)) {
-      if (actorA.role === 'player' && actorB.role === 'attacker') {
-        onCollidePlayerAttacker(actorA, actorB, state)
+      if (actorA.role === 'player' && actorB.role === 'predator') {
+        onCollidePlayerPredator(actorA, actorB, state)
       }
-      if (actorB.role === 'player' && actorA.role === 'attacker') {
-        onCollidePlayerAttacker(actorB, actorA, state)
+      if (actorB.role === 'player' && actorA.role === 'predator') {
+        onCollidePlayerPredator(actorB, actorA, state)
       }
     }
   })
