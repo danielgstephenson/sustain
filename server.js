@@ -5,8 +5,6 @@ import fs from 'fs-extra'
 import path from 'path'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'url'
-import { getLength, getDist, copyVector, getDirection, dot, project, norm, mult, add, sub } from './vector.js'
-import { collide } from './collision.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -36,279 +34,154 @@ function makeServer () {
   }
 }
 
+const tickInterval = 0.1
+
 const server = makeServer()
 const io = new Server(server)
 io.path(staticPath)
 server.listen(config.port, () => {
   console.log(`Listening on :${config.port}`)
-  setInterval(tick, dt * 1000)
+  setInterval(update, tickInterval * 1000)
 })
 
 function range (n) { return [...Array(n).keys()] }
+function sum (array) { return array.reduce((a, b) => a + b, 0) }
+// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
-const dt = 0.01
-const drag = 1
-const actorMovePower = 70
-const unitSpeed = 40
-const mapSize = 150
-const actorSize = 1
-const unitSize = 0.25
-const nodeSize = 3
-const nodeRange = 10
-const growthInterval = 3
-const deathInterval = 3
-const buildInterval = 3
-const gatherInterval = 0.01
-
-const buildRate = 1 / buildInterval
-const deathRate = 1 / deathInterval
-const growthRate = 1 / growthInterval
-
-const compass = [
-  { x: 1, y: 0 },
-  { x: -1, y: 0 },
-  { x: 0, y: 1 },
-  { x: 0, y: -1 },
-  { x: Math.sqrt(0.5), y: Math.sqrt(0.5) },
-  { x: -Math.sqrt(0.5), y: Math.sqrt(0.5) },
-  { x: Math.sqrt(0.5), y: -Math.sqrt(0.5) },
-  { x: -Math.sqrt(0.5), y: -Math.sqrt(0.5) }
-]
-
+const N = 50
 const state = {
   time: 0,
-  players: [],
+  buildInterval: 3,
+  buildTimer: 0,
+  grid: [],
   nodes: [],
-  walls: [],
-  units: [],
-  predators: []
+  scores: { 1: 0, 2: 0 },
+  counts: { 1: 0, 2: 0 }
 }
 const players = new Map()
-const predators = new Map()
 const sockets = new Map()
-const units = new Map()
 
-setupWalls()
-setupNodes()
+state.grid = range(N).map(i => range(N).map(j => {
+  const node = {
+    state: 'empty',
+    r: 0,
+    g: 0,
+    b: 0,
+    x: j,
+    y: i,
+    selected: { 1: false, 2: false }
+  }
+  node.neighbors = []
+  return node
+}))
+state.nodes = state.grid.flat()
+state.nodes.forEach((node, index) => {
+  node.id = index
+})
+const neighbors = state.nodes.map(node => [])
+range(N).forEach(i => range(N).forEach(j => {
+  const id = state.grid[i][j].id
+  const L = N - 1
+  if (i < L) neighbors[id].push(state.grid[i + 1][j])
+  if (i > 0) neighbors[id].push(state.grid[i - 1][j])
+  if (j < L) neighbors[id].push(state.grid[i][j + 1])
+  if (j > 0) neighbors[id].push(state.grid[i][j - 1])
+  if (i < L && j < L) neighbors[id].push(state.grid[i + 1][j + 1])
+  if (i < L && j > 0) neighbors[id].push(state.grid[i + 1][j - 1])
+  if (i > 0 && j < L) neighbors[id].push(state.grid[i - 1][j + 1])
+  if (i > 0 && j > 0) neighbors[id].push(state.grid[i - 1][j - 1])
+}))
+intialize()
 
-function tick () {
-  state.time += dt
-  movePlayers()
-  movePredators()
-  moveUnits()
-  collide(state)
+function update () {
+  if (state.counts[1] > 1 && state.counts[2] <= 1) {
+    state.scores[1] += 1
+    intialize()
+  }
+  if (state.counts[2] > 1 && state.counts[1] <= 1) {
+    state.scores[2] += 1
+    intialize()
+  }
+  state.time += tickInterval
+  state.buildTimer = Math.max(0, state.buildTimer + tickInterval)
+  state.nodes.forEach(node => {
+    node.r = 0
+    node.g = 0
+    node.b = 0
+  })
+  state.nodes.forEach(node => {
+    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'red')))
+    node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'green')))
+    node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'blue')))
+  })
+  state.counts = { 1: 0, 2: 0 }
+  state.nodes.forEach(node => {
+    const grow = [2]
+    const sustain = [0, 3, 4]
+    switch (node.state) {
+      case 'green':
+        if (sustain.includes(node.g) && node.b === 0) node.state = 'green'
+        else node.state = 'dead3'
+        break
+      case 'blue':
+        if (sustain.includes(node.b) && node.g === 0) node.state = 'blue'
+        else node.state = 'dead3'
+        break
+      case 'dead3':
+        node.state = 'dead2'
+        break
+      case 'dead2':
+        node.state = 'dead1'
+        break
+      case 'dead1':
+        node.state = 'dead0'
+        break
+      case 'dead0':
+        node.state = 'empty'
+        break
+      case 'empty':
+        if (grow.includes(node.b) && node.g <= 1) node.state = 'blue'
+        if (grow.includes(node.g) && node.b <= 1) node.state = 'green'
+        break
+    }
+    if (node.state === 'blue') state.counts[1] += 1
+    if (node.state === 'green') state.counts[2] += 1
+  })
+  build()
   updateClients()
-  grow()
-  gather()
-  pursue()
 }
 
-function pursue () {
-  state.predators.forEach(predator => {
-    const prey = predator.prey
-    const preyDir = getDirection(predator.position, prey.position)
-    const projection = project(prey.velocity, preyDir)
-    const rejection = sub(prey.velocity, projection)
-    const flee = 1 * (dot(norm(projection), preyDir) > 0)
-    const fleeVelocity = add(rejection, mult(projection, flee))
-    const distance = getDist(predator.position, prey.position)
-    const advance = 5 + 0.3 * distance
-    const targetVelocity = add(fleeVelocity, mult(preyDir, advance))
-    const targetForce = sub(targetVelocity, predator.velocity)
-    const best = { align: 0 }
-    compass.forEach(compassDir => {
-      const align = dot(compassDir, targetForce)
-      if (align > best.align) {
-        best.align = align
-        predator.force = norm(compassDir)
+function build () {
+  if (state.buildTimer >= state.buildInterval) {
+    state.buildTimer = 0
+    state.nodes.forEach(node => {
+      node.selected = { 1: false, 2: false }
+    })
+    players.forEach(player => {
+      const i = player.mouse.y
+      const j = player.mouse.x
+      if (i >= 0 && i < N && j >= 0 && j < N) {
+        const node = state.grid[i][j]
+        if (node.state === 'empty') node.selected[player.team] = true
       }
     })
-  })
-}
-
-function gather () {
-  state.nodes.forEach(node => {
-    node.gatherTimer -= dt
-  })
-  state.nodes.forEach(node => {
-    if (node.gatherTimer < 0) {
-      node.gatherTimer = gatherInterval
-      const neighbors = node.neighborIds.map(id => state.nodes[id])
-      const amount = 0.1
-      neighbors.forEach(neighbor => {
-        if (neighbor.team === 0 && node.team !== 0 && node.fill + node.income < neighbor.fill) {
-          transfer(neighbor, node, amount)
-        } else if (node.team === neighbor.team && node.fill + node.income < neighbor.fill) {
-          transfer(neighbor, node, amount)
-        }
-      })
-    }
-  })
-}
-
-function transfer (fromNode, toNode, amount) {
-  const maxId = Math.max(...units.keys(), 0)
-  fromNode.fill -= amount
-  toNode.income += amount
-  const unit = {
-    position: copyVector(fromNode.position),
-    id: maxId + 1,
-    targetId: toNode.id,
-    fill: amount,
-    radius: unitSize
-  }
-  units.set(unit.id, unit)
-}
-
-function grow () {
-  state.nodes.forEach(node => {
-    if (node.team === 0 && node.fill < 1) {
-      node.fill += growthRate * dt
-    } else {
-      node.fill -= deathRate * dt
-    }
-    if (node.fill < 0.1) node.team = 0
-    node.radius = node.size * Math.sqrt(node.fill)
-  })
-  players.forEach(player => {
-    player.buildTimer += buildRate * dt
-    player.buildTimer = Math.max(0, Math.min(1, player.buildTimer))
-  })
-}
-
-function moveUnits () {
-  state.units.forEach(unit => {
-    const target = state.nodes[unit.targetId]
-    const direction = getDirection(unit.position, target.position)
-    unit.position.x += direction.x * unitSpeed * dt
-    unit.position.y += direction.y * unitSpeed * dt
-    const dist = getDist(unit.position, target.position)
-    if (dist < unit.radius + target.radius) {
-      target.fill += unit.fill
-      target.income -= unit.fill
-      units.delete(unit.id)
-    }
-  })
-}
-
-function movePlayers () {
-  state.players.forEach(player => {
-    if (player.controls) {
-      const dx = player.controls.right - player.controls.left
-      const dy = player.controls.down - player.controls.up
-      player.force = norm({ x: dx, y: dy })
-      moveActor(player)
-    }
-  })
-}
-
-function movePredators () {
-  state.predators.forEach(predator => {
-    if (predator.freezeTimer <= 0) {
-      moveActor(predator)
-    } else if (predator.freezeTimer > 0) {
-      predator.freezeTimer -= dt
-      predator.freezeTimer = Math.max(0, predator.freezeTimer)
-    }
-  })
-}
-
-function moveActor (actor) {
-  actor.velocity.x += actor.force.x * dt * actorMovePower
-  actor.velocity.y += actor.force.y * dt * actorMovePower
-  actor.position.x += actor.velocity.x * dt
-  actor.position.y += actor.velocity.y * dt
-  actor.velocity = mult(actor.velocity, 1 - dt * drag)
-}
-
-function setupWalls () {
-  const wallThickness = 10
-  const wallPadding = 200
-  const wallLength = mapSize + wallPadding
-  const topWall = {
-    position: { x: 0, y: -0.5 * wallLength },
-    width: wallLength + wallThickness,
-    height: wallThickness,
-    id: state.walls.length,
-    role: 'wall'
-  }
-  state.walls.push(topWall)
-  const bottomWall = {
-    position: { x: 0, y: 0.5 * wallLength },
-    width: wallLength + wallThickness,
-    height: wallThickness,
-    id: state.walls.length,
-    role: 'wall'
-  }
-  state.walls.push(bottomWall)
-  const leftWall = {
-    position: { x: -0.5 * wallLength, y: 0 },
-    width: wallThickness,
-    height: wallLength + wallThickness,
-    id: state.walls.length,
-    role: 'wall'
-  }
-  state.walls.push(leftWall)
-  const rightWall = {
-    position: { x: 0.5 * wallLength, y: 0 },
-    width: wallThickness,
-    height: wallLength + 0.5 * wallThickness,
-    id: state.walls.length,
-    role: 'wall'
-  }
-  state.walls.push(rightWall)
-}
-
-function setupNodes () {
-  range(100000).forEach(i => {
-    const position = {
-      x: (Math.random() - 0.5) * (mapSize - 4 * nodeSize),
-      y: (Math.random() - 0.5) * (mapSize - 4 * nodeSize)
-    }
-    const nodeDistances = state.nodes.map(node => getDist(position, node.position))
-    const minNodeDist = Math.min(...nodeDistances, Infinity)
-    const edgeDistances = nodeDistances.map(dist => Math.abs(dist - 2 * nodeRange))
-    const minEdgeDist = Math.min(...edgeDistances)
-    const centerDist = getLength(position)
-    if (minNodeDist > 1.3 * nodeRange && minEdgeDist > 0.2 * nodeRange && centerDist > nodeRange) {
-      const node = {
-        position,
-        id: state.nodes.length,
-        size: nodeSize,
-        radius: nodeSize,
-        range: nodeRange,
-        gatherTimer: Math.random() * gatherInterval,
-        fill: 1,
-        income: 0,
-        team: 0,
-        role: 'node',
-        neighborIds: []
-      }
-      state.nodes.push(node)
-    }
-  })
-  range(state.nodes.length).forEach(i => {
-    range(state.nodes.length).forEach(j => {
-      if (i < j) {
-        const a = state.nodes[i]
-        const b = state.nodes[j]
-        const dist = getDist(a.position, b.position)
-        if (dist < 2 * nodeRange) {
-          a.neighborIds.push(b.id)
-          b.neighborIds.push(a.id)
-        }
+    state.nodes.forEach(node => {
+      if (node.selected[1] && !node.selected[2]) {
+        node.state = 'blue'
+      } else if (node.selected[2] && !node.selected[1]) {
+        node.state = 'green'
+      } else if (node.selected[1] && node.selected[2]) {
+        node.state = 'red'
       }
     })
-  })
+  }
 }
 
 async function updateClients () {
   state.players = Array.from(players.values())
-  state.predators = Array.from(predators.values())
-  state.units = Array.from(units.values())
   players.forEach(player => {
     const socket = sockets.get(player.id)
-    const msg = { state, position: player.position }
+    const msg = { state, team: player.team }
     socket.emit('updateClient', msg)
   })
 }
@@ -323,34 +196,34 @@ io.on('connection', socket => {
   const player = {
     id: socket.id,
     team: smallTeam,
-    buildTimer: 0,
-    position: { x: 0, y: 0 },
-    velocity: { x: 0, y: 0 },
-    force: { x: 0, y: 0 },
-    radius: actorSize,
-    role: 'player'
+    role: 'player',
+    mouse: { x: 0, y: 0 }
   }
   players.set(socket.id, player)
   sockets.set(socket.id, socket)
-  const predator = {
-    id: socket.id,
-    team: 3,
-    position: { x: 0, y: 50 },
-    velocity: { x: 0, y: 0 },
-    force: { x: 0, y: 0 },
-    radius: actorSize,
-    prey: player,
-    freezeTimer: 0,
-    role: 'predator'
-  }
-  predators.set(socket.id, predator)
   socket.on('updateServer', message => {
-    player.controls = message.controls
+    player.mouse = message.mouse
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
-    predators.delete(socket.id)
   })
 })
+
+function intialize () {
+  state.nodes.forEach(node => {
+    node.state = 'empty'
+  })
+  range(N).forEach(() => {
+    const i = Math.floor(Math.random() * N)
+    const jb = Math.floor(Math.random() * N)
+    const jg = N - jb - 1
+    if (jb !== jg) {
+      state.grid[i][jb].state = 'blue'
+      state.grid[i][jg].state = 'green'
+    }
+  })
+  state.time = 0
+  state.buildTimer = 0
+}
