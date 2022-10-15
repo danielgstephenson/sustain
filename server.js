@@ -34,7 +34,7 @@ function makeServer () {
   }
 }
 
-const tickInterval = 0.1
+const tickInterval = 0.5
 
 const server = makeServer()
 const io = new Server(server)
