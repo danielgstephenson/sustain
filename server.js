@@ -117,7 +117,7 @@ function update () {
   state.counts = { 1: 0, 2: 0 }
   state.nodes.forEach(node => {
     const grow = [2]
-    const sustain = [0, 3, 4]
+    const sustain = [0, 3, 4, 5]
     switch (node.state) {
       case 'green':
         if (sustain.includes(node.g) && node.b === 0) node.state = 'green'
@@ -162,7 +162,7 @@ function build () {
       const j = player.mouse.x
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = state.grid[i][j]
-        if (node.state === 'empty') node.selected[player.team] = true
+        if (node) node.selected[player.team] = true
       }
     })
     state.nodes.forEach(node => {
