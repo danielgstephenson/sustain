@@ -46,10 +46,11 @@ server.listen(config.port, () => {
 
 function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
-// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
+function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
 const N = 80
 const state = {
+  N,
   time: 0,
   buildInterval: 3,
   buildTimer: 0,
@@ -119,13 +120,22 @@ function update () {
     const grow = [2]
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
+      case 'red':
+        if (node.b > 0 || node.g > 0) node.state = 'dead3'
+        break
       case 'green':
-        if (sustain.includes(node.g) && node.b === 0) node.state = 'green'
-        else node.state = 'dead3'
+        if (sustain.includes(node.g) && node.b === 0 && node.r === 0) node.state = 'green'
+        else node.state = 'dead4'
         break
       case 'blue':
-        if (sustain.includes(node.b) && node.g === 0) node.state = 'blue'
-        else node.state = 'dead3'
+        if (sustain.includes(node.b) && node.g === 0 && node.r === 0) node.state = 'blue'
+        else node.state = 'dead4'
+        break
+      case 'dead5':
+        node.state = 'dead4'
+        break
+      case 'dead4':
+        node.state = 'dead3'
         break
       case 'dead3':
         node.state = 'dead2'
@@ -215,13 +225,42 @@ function intialize () {
   state.nodes.forEach(node => {
     node.state = 'empty'
   })
+  let redCount = 0
+  const maxRed = 0.3 * N * N
+  range(1000).forEach(() => {
+    let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    range(500).forEach(step => {
+      if (Math.random() < 0.5) {
+        i += Math.round(2 * Math.random() - 1)
+        i = clamp(0, N - 1, i)
+      } else {
+        j += Math.round(2 * Math.random() - 1)
+        j = clamp(0, N - 1, j)
+      }
+      const j1 = j
+      const j2 = N - j1 - 1
+      if (redCount < maxRed) {
+        const node1 = state.grid[i][j1]
+        const node2 = state.grid[i][j2]
+        if (node1.state !== 'red' && node2.state !== 'red') {
+          state.grid[i][j1].state = 'red'
+          state.grid[i][j2].state = 'red'
+          redCount += 2
+        }
+      }
+    })
+  })
+  console.log('redCount', redCount)
+  console.log('maxRed', maxRed)
+  console.log('state.nodes.length', state.nodes.length)
   range(N).forEach(() => {
     const i = Math.floor(Math.random() * N)
-    const jb = Math.floor(Math.random() * N)
-    const jg = N - jb - 1
-    if (jb !== jg) {
-      state.grid[i][jb].state = 'blue'
-      state.grid[i][jg].state = 'green'
+    const jB = Math.floor(Math.random() * N)
+    const jG = N - jB - 1
+    if (jB !== jG) {
+      state.grid[i][jB].state = 'blue'
+      state.grid[i][jG].state = 'green'
     }
   })
   state.time = 0

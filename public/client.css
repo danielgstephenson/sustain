@@ -6,11 +6,11 @@ body {
   padding: 0;
   overflow: hidden; 
   align-items: center;
+  cursor: url('cursor.png'), pointer;
 }
 canvas { 
   margin-top: 0vmin;
   border: 1px solid hsl(180, 10%, 10%);
-  background: black;
 }
 #mainDiv {
   display: flex;
