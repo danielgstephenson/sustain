@@ -48,7 +48,7 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
-const N = 50
+const N = 80
 const state = {
   N,
   time: 0,
