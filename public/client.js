@@ -33,7 +33,6 @@ const camera = {
 let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
-  console.log('updateClientRate', msg.state.time - state.time)
   const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
   document.body.style.cursor = cursor
   if (N !== state.N) {
@@ -52,10 +51,8 @@ socket.on('updateClient', (msg) => {
   */
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
-  /*
   const color = state.grid[mouse.y][mouse.x].state
   console.log('mouse', mouse.x, mouse.y, color)
-  */
 })
 
 function range (n) { return [...Array(n).keys()] }
