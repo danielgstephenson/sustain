@@ -34,14 +34,14 @@ function makeServer () {
   }
 }
 
-const tickInterval = 0.1
+const updateInterval = 0.1
 
 const server = makeServer()
 const io = new Server(server)
 io.path(staticPath)
 server.listen(config.port, () => {
   console.log(`Listening on :${config.port}`)
-  setInterval(update, tickInterval * 1000)
+  setInterval(update, updateInterval * 1000)
 })
 
 function range (n) { return [...Array(n).keys()] }
@@ -104,8 +104,8 @@ function update () {
     state.scores[2] += 1
     intialize()
   }
-  state.time += tickInterval
-  state.buildTimer = Math.max(0, state.buildTimer + tickInterval)
+  state.time += updateInterval
+  state.buildTimer = Math.max(0, state.buildTimer + updateInterval)
   state.nodes.forEach(node => {
     node.r = 0
     node.g = 0
@@ -161,7 +161,11 @@ function update () {
   build()
   updateClients()
   const endTime = Date.now()
-  console.log('updateTime', endTime - startTime)
+  const updateTime = (endTime - startTime) / 1000
+  if (updateTime > updateInterval) {
+    console.log('updateInterval', updateInterval)
+    console.log('updateTime', updateTime)
+  }
 }
 
 function build () {
