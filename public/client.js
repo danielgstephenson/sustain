@@ -44,12 +44,6 @@ socket.on('updateClient', (msg) => {
   }
   state = msg.state
   state.team = msg.team
-  /*
-  state.grid = msg.state.grid
-  state.nodes = msg.state.nodes
-  state.time = msg.state.time
-  state.team = msg.team
-  */
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
   console.log('mouse', mouse.x, mouse.y, msg.mouse.x, msg.mouse.y)
