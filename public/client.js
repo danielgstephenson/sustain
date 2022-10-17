@@ -57,8 +57,8 @@ socket.on('updateClientState', (msg) => {
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
-  msg.nodeStates.forEach((s, i) => {
-    nodes[i] = s
+  msg.states.forEach((state, i) => {
+    nodes[i].state = state
   })
 })
 
@@ -132,7 +132,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log(state)
+  console.log('nodes', nodes)
 }
 
 window.onmouseup = function (e) {
