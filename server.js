@@ -195,7 +195,7 @@ function build () {
 
 function updateClientState () {
   const states = state.nodes.map(node => node.state)
-  const msg = { states }
+  const msg = { N, states }
   io.emit('updateClientState', msg)
 }
 
