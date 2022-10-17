@@ -219,7 +219,6 @@ io.on('connection', socket => {
     player.mouse = message.mouse
     const reply = { state, team: player.team, mouse: player.mouse }
     socket.emit('test', reply)
-    // console.log(`mouse (${player.mouse.x}, ${player.mouse.y})`)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)

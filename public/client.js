@@ -137,6 +137,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
+  console.log(state)
 }
 
 window.onmouseup = function (e) {
