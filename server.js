@@ -193,7 +193,7 @@ async function updateClients () {
   state.players = Array.from(players.values())
   players.forEach(player => {
     const socket = sockets.get(player.id)
-    const msg = { state, team: player.team }
+    const msg = { state, team: player.team, mouse: player.mouse }
     socket.emit('updateClient', msg)
   })
 }
