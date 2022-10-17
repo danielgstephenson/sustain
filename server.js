@@ -216,7 +216,13 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
-    const reply = { team: player.team, mouse: player.mouse, scores: state.scores }
+    const reply = {
+      team: player.team,
+      mouse: player.mouse,
+      scores: state.scores,
+      buildTimer: state.buildTimer,
+      buildInterval: state.buildInterval
+    }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {

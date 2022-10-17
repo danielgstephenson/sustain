@@ -27,6 +27,9 @@ let nodes = []
 let grid = []
 setupNodes(N)
 
+let buildTimer = 0
+let buildInterval = 5
+
 console.log('nodes', nodes)
 
 let team = 0
@@ -45,6 +48,8 @@ socket.on('updateClient', (msg) => {
   document.body.style.cursor = cursor
   team = msg.team
   scores = msg.scores
+  buildInterval = msg.buildInterval
+  buildTimer = msg.buildTimer
   blueDiv.innerHTML = scores[1]
   greenDiv.innerHTML = scores[2]
   console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
@@ -183,7 +188,7 @@ const colors = {
 }
 
 function drawState () {
-  const C = 1 - (state.buildTimer / state.buildInterval) ** 2
+  const C = 1 - (buildTimer / buildInterval) ** 2
   if (team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
   if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
   const imageData = context0.createImageData(N, N)
