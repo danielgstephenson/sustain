@@ -46,7 +46,7 @@ socket.on('updateClient', (msg) => {
   state.team = msg.team
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
-  console.log('mouse', mouse.x, mouse.y, msg.mouse.x, msg.mouse.y)
+  console.log('mouse', mouse.x, msg.mouse.x, mouse.y, msg.mouse.y)
 })
 
 function range (n) { return [...Array(n).keys()] }
