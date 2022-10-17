@@ -188,7 +188,7 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      console.log('node.state', node.state)
+      console.log('node.state', i, node.state)
       let color = colors[node.state]
       if (node.state === 'empty') {
         if (node.selectGreen || node.selectBlue) {
