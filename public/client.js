@@ -14,7 +14,7 @@ let canvas0 = new OffscreenCanvas(N, N)
 let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
-const state = {
+let state = {
   time: 0,
   nodes: [],
   grid: [],
@@ -34,10 +34,6 @@ let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
   console.log('updateClientRate', msg.state.time - state.time)
-  state.grid = msg.state.grid
-  state.nodes = msg.state.nodes
-  state.time = msg.state.time
-  state.team = msg.team
   const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
   document.body.style.cursor = cursor
   if (N !== state.N) {
@@ -47,6 +43,13 @@ socket.on('updateClient', (msg) => {
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
+  state = msg.state
+  /*
+  state.grid = msg.state.grid
+  state.nodes = msg.state.nodes
+  state.time = msg.state.time
+  state.team = msg.team
+  */
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
   /*
