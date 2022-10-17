@@ -22,7 +22,7 @@ let state = {
   N: 80
 }
 
-console.log('state.nodes.length', state.nodes.length)
+console.log('state', state)
 
 let team = 0
 
