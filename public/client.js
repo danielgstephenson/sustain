@@ -22,6 +22,8 @@ let state = {
   N: 80
 }
 
+console.log('state.nodes.length', state.nodes.length)
+
 let team = 0
 
 const camera = {
@@ -44,7 +46,6 @@ socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
     state.nodes = range(N).forEach(i => ({ state: 'empty' }))
-    console.log('state.nodes.length', state.nodes.length)
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
