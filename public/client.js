@@ -45,6 +45,7 @@ socket.on('updateClient', (msg) => {
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
+    console.log('reset canvas0')
   }
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
