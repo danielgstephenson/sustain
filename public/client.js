@@ -46,7 +46,8 @@ socket.on('updateClient', (msg) => {
   state.team = msg.team
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
-  console.log('mouse', mouse.x, msg.mouse.x, mouse.y, msg.mouse.y)
+  console.log('lag', mouse.time - msg.mouse.time)
+  // console.log('mouse', mouse.x, msg.mouse.x, mouse.y, msg.mouse.y)
 })
 
 function range (n) { return [...Array(n).keys()] }
@@ -62,7 +63,8 @@ const mouse = {
   x: 0,
   y: 0,
   canvasX: 0,
-  canvasY: 0
+  canvasY: 0,
+  time: Date.now()
 }
 const keys = new Map()
 keys.set('w', 'up')
@@ -209,6 +211,7 @@ draw()
 setInterval(updateServer, 50)
 
 function updateServer () {
+  mouse.time = Date.now()
   const msg = { mouse }
   socket.emit('updateServer', msg)
 }
