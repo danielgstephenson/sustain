@@ -172,6 +172,7 @@ function build () {
       const j = player.mouse.x
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = state.grid[i][j]
+        console.log('build node', node)
         if (node) node.selected[player.team] = true
       }
     })
@@ -213,7 +214,7 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
-    console.log(`mouse (${player.mouse.x}, ${player.mouse.y})`)
+    // console.log(`mouse (${player.mouse.x}, ${player.mouse.y})`)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)
