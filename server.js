@@ -193,7 +193,7 @@ function build () {
 
 function updateClients () {
   players.forEach(player => {
-    const socket = sockets[player.id]
+    const socket = sockets.get(player.id)
     const msg = { state, team: player.team, mouse: player.mouse }
     socket.emit('updateClient', msg)
   })
