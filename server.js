@@ -34,7 +34,7 @@ function makeServer () {
   }
 }
 
-const tickInterval = 0.2
+const tickInterval = 0.1
 
 const server = makeServer()
 const io = new Server(server)
@@ -48,7 +48,7 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
-const N = 90
+const N = 80
 const state = {
   N,
   time: 0,
