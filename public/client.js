@@ -16,13 +16,14 @@ context0.imageSmoothingEnabled = false
 
 let state = {
   time: 0,
-  nodes: range(N).forEach(i => ({ state: 'empty' })),
   scores: [0, 0],
   team: 1,
   N: 80
 }
 
-console.log('state', state)
+let nodes = range(N).forEach(i => ({ state: 'empty' }))
+
+console.log('nodes', nodes)
 
 let team = 0
 
@@ -45,14 +46,14 @@ socket.on('updateClient', (msg) => {
 socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
-    state.nodes = range(N).forEach(i => ({ state: 'empty' }))
+    nodes = range(N).forEach(i => ({ state: 'empty' }))
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
   msg.nodeStates.forEach((s, i) => {
-    state.nodes[i] = s
+    nodes[i] = s
   })
   state = msg.state
   blueDiv.innerHTML = state.scores[1]
@@ -183,7 +184,7 @@ function drawState () {
   if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
   const imageData = context0.createImageData(N, N)
   range(N * N).forEach(i => {
-    const node = state.nodes[i]
+    const node = nodes[i]
     if (node) {
       let color = colors[node.state]
       if (node.state === 'empty') {
