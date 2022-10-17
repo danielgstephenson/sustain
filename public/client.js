@@ -33,6 +33,7 @@ const camera = {
 let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
+  console.log('updateClientRate', msg.state.time - state.time)
   for (const property in msg.state) {
     state[property] = msg.state[property]
   }
