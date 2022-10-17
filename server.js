@@ -41,7 +41,7 @@ const io = new Server(server)
 io.path(staticPath)
 server.listen(config.port, () => {
   console.log(`Listening on :${config.port}`)
-  setInterval(update, tickInterval * 1000)
+  update()
 })
 
 function range (n) { return [...Array(n).keys()] }
@@ -159,6 +159,7 @@ function update () {
   })
   build()
   updateClients()
+  setTimeout(update, tickInterval)
 }
 
 function build () {
