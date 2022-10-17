@@ -182,7 +182,7 @@ function drawState () {
         if (node.selectGreen || node.selectBlue) {
           color = colors.selected
         } else if (node.x === mouse.x && node.y === mouse.y) {
-          if (!mouse.down[2]) color = colors.mouse
+          color = colors.mouse
         }
       }
       imageData.data[i * 4 + 0] = 255 * color.r

@@ -168,13 +168,11 @@ function build () {
       node.selected = { 1: false, 2: false }
     })
     players.forEach(player => {
-      if (!player.mouse.down[2]) {
-        const i = player.mouse.y
-        const j = player.mouse.x
-        if (i >= 0 && i < N && j >= 0 && j < N) {
-          const node = state.grid[i][j]
-          if (node) node.selected[player.team] = true
-        }
+      const i = player.mouse.y
+      const j = player.mouse.x
+      if (i >= 0 && i < N && j >= 0 && j < N) {
+        const node = state.grid[i][j]
+        if (node) node.selected[player.team] = true
       }
     })
     state.nodes.forEach(node => {
