@@ -213,6 +213,7 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
+    console.log(`mouse (${player.mouse.x, player.mouse.y})`)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)
