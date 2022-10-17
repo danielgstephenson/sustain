@@ -14,14 +14,6 @@ let canvas0 = new OffscreenCanvas(N, N)
 let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
-// Eliminate State Object
-
-const state = {
-  time: 0,
-  team: 1,
-  N: 80
-}
-
 let scores = [0, 0]
 let nodes = []
 let grid = []

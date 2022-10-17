@@ -97,7 +97,6 @@ range(N).forEach(i => range(N).forEach(j => {
 intialize()
 
 function update () {
-  const startTime = Date.now()
   if (state.counts[1] > 1 && state.counts[2] <= 1) {
     state.scores[1] += 1
     intialize()
@@ -162,9 +161,6 @@ function update () {
   })
   build()
   updateClientState()
-  const endTime = Date.now()
-  const updateTime = (endTime - startTime) / 1000
-  console.log('updateTime', updateTime)
 }
 
 function build () {
