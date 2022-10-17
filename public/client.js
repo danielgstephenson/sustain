@@ -34,9 +34,7 @@ let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
   console.log('updateClientRate', msg.state.time - state.time)
-  for (const property in msg.state) {
-    state[property] = msg.state[property]
-  }
+  state.time = msg.state.time
   state.team = msg.team
   const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
   document.body.style.cursor = cursor
