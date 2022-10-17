@@ -208,7 +208,7 @@ function draw () {
 
 draw()
 
-setInterval(updateServer, 200)
+setInterval(updateServer, 100)
 
 function updateServer () {
   mouse.time = Date.now()
