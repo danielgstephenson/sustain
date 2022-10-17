@@ -172,15 +172,16 @@ function build () {
       const j = player.mouse.x
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = state.grid[i][j]
-        console.log('build node', node)
         if (node) node.selected[player.team] = true
       }
     })
     state.nodes.forEach(node => {
       if (node.selected[1] && !node.selected[2]) {
         node.state = 'blue'
+        console.log('build', node.x, node.y, 'blue')
       } else if (node.selected[2] && !node.selected[1]) {
         node.state = 'green'
+        console.log('build', node.x, node.y, 'green')
       } else if (node.selected[1] && node.selected[2]) {
         node.state = 'red'
       }
