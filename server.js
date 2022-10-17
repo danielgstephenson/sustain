@@ -230,6 +230,7 @@ io.on('connection', socket => {
 })
 
 function intialize () {
+  console.log('initialize')
   state.nodes.forEach(node => {
     node.state = 'empty'
   })
