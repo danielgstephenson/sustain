@@ -51,8 +51,8 @@ socket.on('updateClient', (msg) => {
 })
 
 socket.on('updateClientState', (msg) => {
-  if (N !== state.N) {
-    N = state.N
+  if (N !== msg.N) {
+    N = msg.N
     setupNodes(N)
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
