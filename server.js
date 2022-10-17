@@ -260,9 +260,6 @@ function intialize () {
       }
     })
   })
-  console.log('redCount', redCount)
-  console.log('maxRed', maxRed)
-  console.log('state.nodes.length', state.nodes.length)
   range(N).forEach(() => {
     const i = Math.floor(Math.random() * N)
     const jB = Math.floor(Math.random() * N)
