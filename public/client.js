@@ -16,7 +16,7 @@ context0.imageSmoothingEnabled = false
 
 let state = {
   time: 0,
-  nodes: [],
+  nodes: range(N).forEach(i => ({ state: 'empty' })),
   scores: [0, 0],
   team: 1,
   N: 80
