@@ -23,7 +23,7 @@ const state = {
 }
 
 let scores = [0, 0]
-const nodes = []
+let nodes = []
 let grid = []
 setupNodes(N)
 
@@ -242,8 +242,8 @@ function setupNodes (N) {
     }
     return node
   }))
-  state.nodes = state.grid.flat()
-  state.nodes.forEach((node, index) => {
+  nodes = grid.flat()
+  nodes.forEach((node, index) => {
     node.id = index
   })
 }
