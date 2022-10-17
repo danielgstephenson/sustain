@@ -162,9 +162,9 @@ function update () {
   updateClients()
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
+  console.log('updateTime', updateTime)
   if (updateTime > updateInterval) {
     console.log('updateInterval', updateInterval)
-    console.log('updateTime', updateTime)
   }
 }
 
