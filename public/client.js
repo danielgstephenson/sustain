@@ -117,8 +117,6 @@ window.onmousedown = function (e) {
   // console.log('state', state)
   // console.log('mouse', mouse)
   console.log('mouse', mouse.x, mouse.y)
-  console.log('canvas0.height', canvas0.height)
-  console.log('canvas0.width', canvas0.width)
   if (e.button === 0) mouse.down[0] = true
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
