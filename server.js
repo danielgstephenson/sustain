@@ -50,7 +50,7 @@ function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
 // Eliminate State Object
 
-const N = 50
+const N = 100
 const state = {
   N,
   time: 0,

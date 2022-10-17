@@ -190,7 +190,7 @@ const colors = {
 function drawState () {
   const C = 1 - (buildTimer / buildInterval) ** 2
   if (team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
-  if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
+  if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.2 + 0.5 * C }
   const imageData = context0.createImageData(N, N)
   range(N * N).forEach(i => {
     const node = nodes[i]
