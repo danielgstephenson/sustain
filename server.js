@@ -95,7 +95,7 @@ range(N).forEach(i => range(N).forEach(j => {
 intialize()
 
 function update () {
-  // const startTime = Date.now()
+  const startTime = Date.now()
   if (state.counts[1] > 1 && state.counts[2] <= 1) {
     state.scores[1] += 1
     intialize()
@@ -159,12 +159,10 @@ function update () {
     if (node.state === 'green') state.counts[2] += 1
   })
   build()
-  setTimeout(updateClients, 1)
-  /*
+  updateClientState()
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
   console.log('updateTime', updateTime)
-  */
 }
 
 function build () {
@@ -193,16 +191,9 @@ function build () {
   }
 }
 
-function updateClients () {
-  const startTime = Date.now()
-  players.forEach(player => {
-    const socket = sockets.get(player.id)
-    const msg = { state, team: player.team, mouse: player.mouse }
-    socket.emit('updateClient', msg)
-  })
-  const endTime = Date.now()
-  const updateClientsTime = (endTime - startTime) / 1000
-  console.log('updateClientsTime', updateClientsTime)
+function updateClientState () {
+  const msg = { state }
+  io.emit('updateClientState', msg)
 }
 
 io.on('connection', socket => {
@@ -222,6 +213,8 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
+    const reply = { team: player.team, mouse: player.mouse }
+    socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)

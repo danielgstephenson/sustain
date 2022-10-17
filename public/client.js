@@ -23,6 +23,8 @@ let state = {
   N: 80
 }
 
+let team = 0
+
 const camera = {
   scale: 1,
   zoom: 0,
@@ -35,6 +37,11 @@ let canvasSize = 1
 socket.on('updateClient', (msg) => {
   const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
   document.body.style.cursor = cursor
+  team = msg.team
+  console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
+})
+
+socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
     canvas0 = new OffscreenCanvas(N, N)
@@ -43,10 +50,8 @@ socket.on('updateClient', (msg) => {
     console.log('reset canvas0')
   }
   state = msg.state
-  state.team = msg.team
   blueDiv.innerHTML = state.scores[1]
-  greenDiv.innerHTML = state.scores[2]
-  console.log('test delay', (mouse.time - msg.mouse.time) / 1000)
+  greenDiv.innerHTML = state.scores[2
 })
 
 function range (n) { return [...Array(n).keys()] }
@@ -169,8 +174,8 @@ const colors = {
 
 function drawState () {
   const C = 1 - (state.buildTimer / state.buildInterval) ** 2
-  if (state.team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
-  if (state.team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
+  if (team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
+  if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
   const imageData = context0.createImageData(N, N)
   range(N * N).forEach(i => {
     const node = state.nodes[i]
