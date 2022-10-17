@@ -17,7 +17,6 @@ context0.imageSmoothingEnabled = false
 let state = {
   time: 0,
   nodes: [],
-  grid: [],
   scores: [0, 0],
   team: 1,
   N: 80
@@ -44,11 +43,15 @@ socket.on('updateClient', (msg) => {
 socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
+    state.nodes = range(N).forEach(i => ({ state: 'empty' }))
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
+  msg.nodeStates.forEach((s, i) => {
+    state.nodes[i] = s
+  })
   state = msg.state
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
