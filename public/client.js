@@ -43,6 +43,7 @@ socket.on('updateClient', (msg) => {
     console.log('reset canvas0')
   }
   state = msg.state
+  state.team = msg.team
   /*
   state.grid = msg.state.grid
   state.nodes = msg.state.nodes
