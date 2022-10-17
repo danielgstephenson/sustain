@@ -95,7 +95,7 @@ range(N).forEach(i => range(N).forEach(j => {
 intialize()
 
 function update () {
-  const startTime = Date.now()
+  // const startTime = Date.now()
   if (state.counts[1] > 1 && state.counts[2] <= 1) {
     state.scores[1] += 1
     intialize()
@@ -160,9 +160,11 @@ function update () {
   })
   build()
   setTimeout(updateClients, 1)
+  /*
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
   console.log('updateTime', updateTime)
+  */
 }
 
 function build () {
@@ -192,11 +194,15 @@ function build () {
 }
 
 function updateClients () {
+  const startTime = Date.now()
   players.forEach(player => {
     const socket = sockets.get(player.id)
     const msg = { state, team: player.team, mouse: player.mouse }
     socket.emit('updateClient', msg)
   })
+  const endTime = Date.now()
+  const updateClientsTime = (endTime - startTime) / 1000
+  console.log('updateClientsTime', updateClientsTime)
 }
 
 io.on('connection', socket => {
