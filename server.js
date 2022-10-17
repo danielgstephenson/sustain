@@ -159,7 +159,6 @@ function update () {
     if (node.state === 'green') state.counts[2] += 1
   })
   build()
-  updateClients()
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
   console.log('updateTime', updateTime)
@@ -191,15 +190,6 @@ function build () {
   }
 }
 
-async function updateClients () {
-  state.players = Array.from(players.values())
-  players.forEach(player => {
-    const socket = sockets.get(player.id)
-    const msg = { state, team: player.team, mouse: player.mouse }
-    // socket.emit('updateClient', msg)
-  })
-}
-
 io.on('connection', socket => {
   console.log('connection:', socket.id)
   socket.emit('socketId', socket.id)
@@ -218,7 +208,7 @@ io.on('connection', socket => {
   socket.on('updateServer', message => {
     player.mouse = message.mouse
     const reply = { state, team: player.team, mouse: player.mouse }
-    socket.emit('test', reply)
+    socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)

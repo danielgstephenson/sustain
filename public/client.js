@@ -46,24 +46,6 @@ socket.on('updateClient', (msg) => {
   state.team = msg.team
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
-  console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
-  // console.log('mouse', mouse.x, msg.mouse.x, mouse.y, msg.mouse.y)
-})
-
-socket.on('test', (msg) => {
-  const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
-  document.body.style.cursor = cursor
-  if (N !== state.N) {
-    N = state.N
-    canvas0 = new OffscreenCanvas(N, N)
-    context0 = canvas0.getContext('2d')
-    context0.imageSmoothingEnabled = false
-    console.log('reset canvas0')
-  }
-  state = msg.state
-  state.team = msg.team
-  blueDiv.innerHTML = state.scores[1]
-  greenDiv.innerHTML = state.scores[2]
   console.log('test delay', (mouse.time - msg.mouse.time) / 1000)
 })
 
