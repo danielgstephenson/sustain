@@ -159,7 +159,7 @@ function update () {
     if (node.state === 'green') state.counts[2] += 1
   })
   build()
-  setTimeout(1, updateClients)
+  setTimeout(updateClients, 1)
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
   console.log('updateTime', updateTime)
