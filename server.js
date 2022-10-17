@@ -163,9 +163,6 @@ function update () {
   const endTime = Date.now()
   const updateTime = (endTime - startTime) / 1000
   console.log('updateTime', updateTime)
-  if (updateTime > updateInterval) {
-    console.log('updateInterval', updateInterval)
-  }
 }
 
 function build () {
@@ -199,7 +196,7 @@ async function updateClients () {
   players.forEach(player => {
     const socket = sockets.get(player.id)
     const msg = { state, team: player.team, mouse: player.mouse }
-    socket.emit('updateClient', msg)
+    // socket.emit('updateClient', msg)
   })
 }
 
@@ -220,6 +217,8 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
+    const reply = { mouse: player.mouse }
+    socket.emit('test', reply)
     // console.log(`mouse (${player.mouse.x}, ${player.mouse.y})`)
   })
   socket.on('disconnect', () => {

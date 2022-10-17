@@ -46,8 +46,12 @@ socket.on('updateClient', (msg) => {
   state.team = msg.team
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
-  console.log('delay', mouse.time - msg.mouse.time)
+  console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
   // console.log('mouse', mouse.x, msg.mouse.x, mouse.y, msg.mouse.y)
+})
+
+socket.on('test', (msg) => {
+  console.log('test delay', (mouse.time - msg.mouse.time) / 1000)
 })
 
 function range (n) { return [...Array(n).keys()] }
