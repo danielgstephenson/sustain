@@ -190,14 +190,9 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      console.log('node.state', i, node.state)
       let color = colors[node.state]
-      if (node.state === 'empty') {
-        if (node.selectGreen || node.selectBlue) {
-          color = colors.selected
-        } else if (node.x === mouse.x && node.y === mouse.y) {
-          color = colors.mouse
-        }
+      if (node.state === 'empty' && node.x === mouse.x && node.y === mouse.y) {
+        color = colors.mouse
       }
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
