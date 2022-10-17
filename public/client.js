@@ -49,6 +49,8 @@ socket.on('updateClient', (msg) => {
   }
   blueDiv.innerHTML = state.scores[1]
   greenDiv.innerHTML = state.scores[2]
+  const color = state.grid[mouse.y][mouse.x].state
+  console.log('mouse', mouse.x, mouse.y, color)
 })
 
 function range (n) { return [...Array(n).keys()] }
@@ -120,8 +122,6 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  const color = state.grid[mouse.y][mouse.x].state
-  console.log('mouse', mouse.x, mouse.y, mouse.node, color)
 }
 
 window.onmouseup = function (e) {
