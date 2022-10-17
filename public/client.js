@@ -23,7 +23,9 @@ const state = {
 }
 
 let scores = [0, 0]
-let nodes = range(N).map(i => ({ state: 'empty' }))
+const nodes = []
+let grid = []
+setupNodes(N)
 
 console.log('nodes', nodes)
 
@@ -51,7 +53,7 @@ socket.on('updateClient', (msg) => {
 socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
-    nodes = range(N).map(i => ({ state: 'empty' }))
+    setupNodes(N)
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
@@ -228,4 +230,20 @@ function updateServer () {
   mouse.time = Date.now()
   const msg = { mouse }
   socket.emit('updateServer', msg)
+}
+
+function setupNodes (N) {
+  grid = range(N).map(i => range(N).map(j => {
+    const node = {
+      state: 'empty',
+      x: j,
+      y: i,
+      selected: { 1: false, 2: false }
+    }
+    return node
+  }))
+  state.nodes = state.grid.flat()
+  state.nodes.forEach((node, index) => {
+    node.id = index
+  })
 }
