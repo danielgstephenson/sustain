@@ -21,7 +21,7 @@ let state = {
   N: 80
 }
 
-let nodes = range(N).forEach(i => ({ state: 'empty' }))
+let nodes = range(N).map(i => ({ state: 'empty' }))
 
 console.log('nodes', nodes)
 
@@ -46,7 +46,7 @@ socket.on('updateClient', (msg) => {
 socket.on('updateClientState', (msg) => {
   if (N !== state.N) {
     N = state.N
-    nodes = range(N).forEach(i => ({ state: 'empty' }))
+    nodes = range(N).map(i => ({ state: 'empty' }))
     canvas0 = new OffscreenCanvas(N, N)
     context0 = canvas0.getContext('2d')
     context0.imageSmoothingEnabled = false
