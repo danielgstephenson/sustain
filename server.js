@@ -48,6 +48,8 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
+// Eliminate State Object
+
 const N = 50
 const state = {
   N,
@@ -214,7 +216,7 @@ io.on('connection', socket => {
   sockets.set(socket.id, socket)
   socket.on('updateServer', message => {
     player.mouse = message.mouse
-    const reply = { team: player.team, mouse: player.mouse }
+    const reply = { team: player.team, mouse: player.mouse, scores: state.scores }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {

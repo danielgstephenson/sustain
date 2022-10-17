@@ -14,13 +14,15 @@ let canvas0 = new OffscreenCanvas(N, N)
 let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
-let state = {
+// Eliminate State Object
+
+const state = {
   time: 0,
-  scores: [0, 0],
   team: 1,
   N: 80
 }
 
+let scores = [0, 0]
 let nodes = range(N).map(i => ({ state: 'empty' }))
 
 console.log('nodes', nodes)
@@ -40,6 +42,9 @@ socket.on('updateClient', (msg) => {
   const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
   document.body.style.cursor = cursor
   team = msg.team
+  scores = msg.scores
+  blueDiv.innerHTML = scores[1]
+  greenDiv.innerHTML = scores[2]
   console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
 })
 
@@ -55,9 +60,6 @@ socket.on('updateClientState', (msg) => {
   msg.nodeStates.forEach((s, i) => {
     nodes[i] = s
   })
-  state = msg.state
-  blueDiv.innerHTML = state.scores[1]
-  greenDiv.innerHTML = state.scores[2]
 })
 
 function range (n) { return [...Array(n).keys()] }
