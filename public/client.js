@@ -22,7 +22,15 @@ const state = {
   team: 1,
   N: 80
 }
-let scale = 1
+
+const camera = {
+  scale: 1,
+  zoom: 0,
+  x: 0,
+  y: 0
+}
+
+let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
   for (const property in msg.state) {
@@ -42,7 +50,7 @@ socket.on('updateClient', (msg) => {
 })
 
 function range (n) { return [...Array(n).keys()] }
-// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
+function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 // const sum = array => array.reduce((a, b) => a + b, 0)
 
 // Disable Right Click Menu
@@ -52,7 +60,9 @@ const mouse = {
   down: [false, false, false],
   loc: [0, 0],
   x: 0,
-  y: 0
+  y: 0,
+  canvasX: 0,
+  canvasY: 0
 }
 const keys = new Map()
 keys.set('w', 'up')
@@ -69,12 +79,38 @@ keys.set('Enter', 'select')
 function updateMouse (e) {
   const cx = canvas1.getBoundingClientRect().left
   const cy = canvas1.getBoundingClientRect().top
-  mouse.y = Math.floor((e.pageY - cy) * N / scale)
-  mouse.x = Math.floor((e.pageX - cx) * N / scale)
+  const canvasPixelX = e.pageX - cx
+  const canvasPixelY = e.pageY - cy
+  mouse.canvasX = 100 * canvasPixelX / canvasSize
+  mouse.canvasY = 100 * canvasPixelY / canvasSize
+  mouse.x = Math.floor(N * (mouse.canvasX + camera.x) / (100 * camera.scale))
+  mouse.y = Math.floor(N * (mouse.canvasY + camera.y) / (100 * camera.scale))
 }
 
 window.onmousemove = function (e) {
   updateMouse(e)
+  if (mouse.down[2]) {
+    const dx = e.movementX * 300 / canvasSize
+    const dy = e.movementY * 300 / canvasSize
+    camera.x -= dx
+    camera.y -= dy
+    camera.x = clamp(0, 100 * (camera.scale - 1), camera.x)
+    camera.y = clamp(0, 100 * (camera.scale - 1), camera.y)
+  }
+}
+
+window.onwheel = function (e) {
+  updateMouse(e)
+  camera.zoom -= e.deltaY / 1000
+  camera.zoom = Math.max(0, camera.zoom)
+  const oldScale = camera.scale
+  camera.scale = Math.exp(camera.zoom)
+  const dScale = camera.scale - oldScale
+  console.log('dScale', dScale)
+  camera.x += mouse.x / N * 100 * (camera.scale - oldScale)
+  camera.y += mouse.y / N * 100 * (camera.scale - oldScale)
+  camera.x = clamp(0, 100 * (camera.scale - 1), camera.x)
+  camera.y = clamp(0, 100 * (camera.scale - 1), camera.y)
 }
 
 window.onmousedown = function (e) {
@@ -106,18 +142,14 @@ window.onkeyup = function (e) {
   })
 }
 
-window.onwheel = function (e) {
-  keys.zoom -= e.deltaY / 1000
-}
-
 function setupCanvas () {
-  scale = 0.95 * Math.min(window.innerHeight, window.innerWidth)
-  canvas1.width = scale
-  canvas1.height = scale
+  canvasSize = 1 * Math.min(window.innerHeight, window.innerWidth)
+  canvas1.width = canvasSize
+  canvas1.height = canvasSize
   const xTranslate = 0
   const yTranslate = 0
-  const xScale = scale / N
-  const yScale = scale / N
+  const xScale = canvasSize / 100
+  const yScale = canvasSize / 100
   context1.setTransform(xScale, 0, 0, yScale, xTranslate, yTranslate)
   context1.imageSmoothingEnabled = false
 }
@@ -138,7 +170,6 @@ const colors = {
 }
 
 function drawState () {
-  // context.clearRect(0, 0, 100, 100)
   const C = 1 - (state.buildTimer / state.buildInterval) ** 2
   if (state.team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
   if (state.team === 2) colors.mouse = { r: 0, g: 1, b: 0.5 + 0.5 * C }
@@ -151,7 +182,7 @@ function drawState () {
         if (node.selectGreen || node.selectBlue) {
           color = colors.selected
         } else if (node.x === mouse.x && node.y === mouse.y) {
-          color = colors.mouse
+          if (!mouse.down[2]) color = colors.mouse
         }
       }
       imageData.data[i * 4 + 0] = 255 * color.r
@@ -162,7 +193,13 @@ function drawState () {
   })
   context0.putImageData(imageData, 0, 0)
   context1.clearRect(0, 0, 100, 100)
-  context1.drawImage(canvas0, 0, 0)
+  const w = 100 * camera.scale
+  const h = 100 * camera.scale
+  context1.drawImage(canvas0, -camera.x, -camera.y, w, h)
+  context1.strokeStyle = 'rgb(60,0,0)'
+  context1.lineWidth = 0.2 * camera.scale
+  const offset = 0.5 * context1.lineWidth
+  context1.strokeRect(-camera.x - offset, -camera.y - offset, w + 2 * offset, h + 2 * offset)
 }
 
 function draw () {

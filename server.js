@@ -48,7 +48,7 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
-const N = 80
+const N = 100
 const state = {
   N,
   time: 0,
@@ -168,11 +168,13 @@ function build () {
       node.selected = { 1: false, 2: false }
     })
     players.forEach(player => {
-      const i = player.mouse.y
-      const j = player.mouse.x
-      if (i >= 0 && i < N && j >= 0 && j < N) {
-        const node = state.grid[i][j]
-        if (node) node.selected[player.team] = true
+      if (!player.mouse.down[2]) {
+        const i = player.mouse.y
+        const j = player.mouse.x
+        if (i >= 0 && i < N && j >= 0 && j < N) {
+          const node = state.grid[i][j]
+          if (node) node.selected[player.team] = true
+        }
       }
     })
     state.nodes.forEach(node => {
