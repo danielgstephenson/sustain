@@ -51,7 +51,7 @@ socket.on('updateClientState', (msg) => {
   }
   state = msg.state
   blueDiv.innerHTML = state.scores[1]
-  greenDiv.innerHTML = state.scores[2
+  greenDiv.innerHTML = state.scores[2]
 })
 
 function range (n) { return [...Array(n).keys()] }
