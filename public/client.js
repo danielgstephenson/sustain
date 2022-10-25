@@ -20,7 +20,6 @@ let grid = []
 setupNodes(N)
 
 let buildTimer = 0
-let buildInterval = 5
 
 console.log('nodes', nodes)
 
@@ -36,11 +35,10 @@ const camera = {
 let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
-  const cursor = msg.team === 1 ? "url('BlueCursor.png'), pointer" : "url('GreenCursor.png'), pointer"
+  const cursor = msg.team === 1 ? "url('BlueCursor.png') 1 1, pointer" : "url('GreenCursor.png') 1 1, pointer"
   document.body.style.cursor = cursor
   team = msg.team
   scores = msg.scores
-  buildInterval = msg.buildInterval
   buildTimer = msg.buildTimer
   blueDiv.innerHTML = scores[1]
   greenDiv.innerHTML = scores[2]
@@ -118,8 +116,6 @@ window.onwheel = function (e) {
   camera.zoom = Math.max(0, camera.zoom)
   const oldScale = camera.scale
   camera.scale = Math.exp(camera.zoom)
-  const dScale = camera.scale - oldScale
-  console.log('dScale', dScale)
   camera.x += mouse.x / N * 100 * (camera.scale - oldScale)
   camera.y += mouse.y / N * 100 * (camera.scale - oldScale)
   camera.x = clamp(0, 100 * (camera.scale - 1), camera.x)
@@ -131,7 +127,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log('nodes', nodes)
+  console.log('buildTimer', buildTimer)
 }
 
 window.onmouseup = function (e) {
@@ -165,32 +161,26 @@ function setupCanvas () {
 }
 
 const colors = {
-  dead5: { r: 0.7, g: 0.7, b: 0.7 },
-  dead4: { r: 0.6, g: 0.6, b: 0.6 },
-  dead3: { r: 0.5, g: 0.5, b: 0.5 },
-  dead2: { r: 0.4, g: 0.4, b: 0.4 },
-  dead1: { r: 0.3, g: 0.3, b: 0.3 },
-  dead0: { r: 0.2, g: 0.2, b: 0.2 },
-  empty: { r: 0, g: 0, b: 0 },
-  green: { r: 0, g: 0.7, b: 0 },
-  blue: { r: 0, g: 0.2, b: 1 },
-  red: { r: 0.3, g: 0.02, b: 0.02 },
+  d5: { r: 0.7, g: 0.7, b: 0.7 },
+  d4: { r: 0.6, g: 0.6, b: 0.6 },
+  d3: { r: 0.5, g: 0.5, b: 0.5 },
+  d2: { r: 0.4, g: 0.4, b: 0.4 },
+  d1: { r: 0.3, g: 0.3, b: 0.3 },
+  d0: { r: 0.2, g: 0.2, b: 0.2 },
+  e: { r: 0, g: 0, b: 0 },
+  g: { r: 0, g: 0.7, b: 0 },
+  b: { r: 0, g: 0.2, b: 1 },
+  r: { r: 0.3, g: 0.02, b: 0.02 },
   mouse: { r: 0, g: 0.3, b: 0.3 },
   selected: { r: 0, g: 0.8, b: 0.8 }
 }
 
 function drawState () {
-  const C = 1 - (buildTimer / buildInterval) ** 2
-  if (team === 1) colors.mouse = { r: 0, g: 0.5 + 0.5 * C, b: 1 }
-  if (team === 2) colors.mouse = { r: 0, g: 1, b: 0.4 + 0.5 * C }
   const imageData = context0.createImageData(N, N)
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      let color = colors[node.state]
-      if (node.state === 'empty' && node.x === mouse.x && node.y === mouse.y) {
-        color = colors.mouse
-      }
+      const color = colors[node.state]
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
@@ -202,10 +192,18 @@ function drawState () {
   const w = 100 * camera.scale
   const h = 100 * camera.scale
   context1.drawImage(canvas0, -camera.x, -camera.y, w, h)
-  context1.strokeStyle = 'rgb(60,0,0)'
-  context1.lineWidth = 0.2 * camera.scale
-  const offset = 0.5 * context1.lineWidth
-  context1.strokeRect(-camera.x - offset, -camera.y - offset, w + 2 * offset, h + 2 * offset)
+  if (team === 1) colors.mouse = { r: 0, g: 0.2, b: 0.5 }
+  if (team === 2) colors.mouse = { r: 0, g: 0.5, b: 0.2 }
+  const g = (255 * 2 * colors.mouse.g).toFixed(0)
+  const b = (255 * 2 * colors.mouse.b).toFixed(0)
+  context1.strokeStyle = `rgba(0,${g},${b},1)`
+  context1.lineWidth = 0.5 * camera.scale
+  context1.beginPath()
+  const radians = 2 * Math.PI * buildTimer
+  const x = mouse.x * 100 * camera.scale / N + 50 * camera.scale / N - camera.x
+  const y = mouse.y * 100 * camera.scale / N + 50 * camera.scale / N - camera.y
+  context1.arc(x, y, 0.25 * camera.scale, 0, radians)
+  context1.stroke()
 }
 
 function draw () {
@@ -227,7 +225,7 @@ function updateServer () {
 function setupNodes (N) {
   grid = range(N).map(i => range(N).map(j => {
     const node = {
-      state: 'empty',
+      state: 'e',
       x: j,
       y: i,
       selected: { 1: false, 2: false }

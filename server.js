@@ -49,8 +49,7 @@ function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
 const N = 100
-const buildInterval = 3
-let buildTimer = 0
+const buildIntervals = { 1: 3, 2: 3 }
 let grid = []
 let nodes = []
 let neighbors = []
@@ -71,93 +70,97 @@ function update () {
     scores[2] += 1
     intialize()
   }
-  buildTimer = Math.max(0, buildTimer + updateInterval)
   nodes.forEach(node => {
     node.r = 0
     node.g = 0
     node.b = 0
   })
   nodes.forEach(node => {
-    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'red')))
-    node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'green')))
-    node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'blue')))
+    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
+    node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
+    node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
   })
   counts = { 1: 0, 2: 0 }
   nodes.forEach(node => {
     const grow = [2]
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
-      case 'red':
-        if (node.b > 0 || node.g > 0) node.state = 'dead3'
+      case 'r':
+        if (node.b > 0 || node.g > 0) node.state = 'd3'
         break
-      case 'green':
-        if (sustain.includes(node.g) && node.b === 0 && node.r === 0) node.state = 'green'
-        else node.state = 'dead4'
+      case 'g':
+        if (sustain.includes(node.g) && node.b === 0 && node.r === 0) node.state = 'g'
+        else node.state = 'd4'
         break
-      case 'blue':
-        if (sustain.includes(node.b) && node.g === 0 && node.r === 0) node.state = 'blue'
-        else node.state = 'dead4'
+      case 'b':
+        if (sustain.includes(node.b) && node.g === 0 && node.r === 0) node.state = 'b'
+        else node.state = 'd4'
         break
-      case 'dead5':
-        node.state = 'dead4'
+      case 'd5':
+        node.state = 'd4'
         break
-      case 'dead4':
-        node.state = 'dead3'
+      case 'd4':
+        node.state = 'd3'
         break
-      case 'dead3':
-        node.state = 'dead2'
+      case 'd3':
+        node.state = 'd2'
         break
-      case 'dead2':
-        node.state = 'dead1'
+      case 'd2':
+        node.state = 'd1'
         break
-      case 'dead1':
-        node.state = 'dead0'
+      case 'd1':
+        node.state = 'd0'
         break
-      case 'dead0':
-        node.state = 'empty'
+      case 'd0':
+        node.state = 'e'
         break
-      case 'empty':
-        if (grow.includes(node.b) && node.g <= 1) node.state = 'blue'
-        if (grow.includes(node.g) && node.b <= 1) node.state = 'green'
+      case 'e':
+        if (grow.includes(node.b) && node.g <= 1) node.state = 'b'
+        if (grow.includes(node.g) && node.b <= 1) node.state = 'g'
         break
     }
-    if (node.state === 'blue') counts[1] += 1
-    if (node.state === 'green') counts[2] += 1
+    if (node.state === 'b') counts[1] += 1
+    if (node.state === 'g') counts[2] += 1
   })
   build()
   updateClients()
 }
 
 function build () {
-  if (buildTimer >= buildInterval) {
-    buildTimer = 0
-    nodes.forEach(node => {
-      node.selected = { 1: false, 2: false }
-    })
-    players.forEach(player => {
+  players.forEach(player => {
+    const buildInterval = buildIntervals[player.team]
+    player.buildTimer += updateInterval / buildInterval
+    if (player.buildTimer > 1) {
+      player.buildTimer = 0
       const i = player.mouse.y
       const j = player.mouse.x
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = grid[i][j]
-        if (node) node.selected[player.team] = true
+        const state = player.team === 1 ? 'b' : 'g'
+        node.state = state
       }
-    })
-    nodes.forEach(node => {
-      if (node.selected[1] && !node.selected[2]) {
-        node.state = 'blue'
-      } else if (node.selected[2] && !node.selected[1]) {
-        node.state = 'green'
-      } else if (node.selected[1] && node.selected[2]) {
-        node.state = 'red'
-      }
-    })
-  }
+    }
+  })
 }
 
 function updateClients () {
   const states = nodes.map(node => node.state)
   const msg = { N, states }
   io.emit('updateClientState', msg)
+}
+
+function updateBuildIntervals () {
+  const playerArray = Array.from(players.values())
+  const teamCount1 = playerArray.filter(player => player.team === 1).length
+  const teamCount2 = playerArray.filter(player => player.team === 2).length
+  const minTeamCount = Math.min(teamCount1, teamCount2)
+  console.log('teamCount1', teamCount1)
+  console.log('teamCount2', teamCount2)
+  if (Math.min(teamCount1, teamCount2) > 0) {
+    buildIntervals[1] = 3 * teamCount1 / minTeamCount
+    buildIntervals[2] = 3 * teamCount2 / minTeamCount
+    console.log('buildIntervals', buildIntervals)
+  }
 }
 
 io.on('connection', socket => {
@@ -171,12 +174,16 @@ io.on('connection', socket => {
     id: socket.id,
     team: smallTeam,
     role: 'player',
-    mouse: { x: 0, y: 0 }
+    mouse: { x: 0, y: 0 },
+    buildTimer: 0
   }
   players.set(socket.id, player)
   sockets.set(socket.id, socket)
+  updateBuildIntervals()
   socket.on('updateServer', message => {
     player.mouse = message.mouse
+    const buildTimer = player.buildTimer
+    const buildInterval = buildIntervals[player.team]
     const reply = { team: player.team, mouse: player.mouse, scores, buildTimer, buildInterval }
     socket.emit('updateClient', reply)
   })
@@ -184,13 +191,14 @@ io.on('connection', socket => {
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
+    updateBuildIntervals()
   })
 })
 
 function intialize () {
   console.log('initialize')
   nodes.forEach(node => {
-    node.state = 'empty'
+    node.state = 'e'
   })
   let redCount = 0
   const maxRed = 0.3 * N * N
@@ -210,9 +218,9 @@ function intialize () {
       if (redCount < maxRed) {
         const node1 = grid[i][j1]
         const node2 = grid[i][j2]
-        if (node1.state !== 'red' && node2.state !== 'red') {
-          grid[i][j1].state = 'red'
-          grid[i][j2].state = 'red'
+        if (node1.state !== 'r' && node2.state !== 'r') {
+          grid[i][j1].state = 'r'
+          grid[i][j2].state = 'r'
           redCount += 2
         }
       }
@@ -223,17 +231,16 @@ function intialize () {
     const jB = Math.floor(Math.random() * N)
     const jG = N - jB - 1
     if (jB !== jG) {
-      grid[i][jB].state = 'blue'
-      grid[i][jG].state = 'green'
+      grid[i][jB].state = 'b'
+      grid[i][jG].state = 'g'
     }
   })
-  buildTimer = 0
 }
 
 function setupNodes () {
   grid = range(N).map(i => range(N).map(j => {
     const node = {
-      state: 'empty',
+      state: 'e',
       r: 0,
       g: 0,
       b: 0,
