@@ -21,10 +21,12 @@ canvas {
   color: hsl(220, 100%, 50%);
   margin-top: 20vh;
   font-size: 10vw;
+  display: none;
 }
 #greenDiv {
   width: 100%;
   color: hsl(140, 100%, 30%);
   margin-top: 20vh;
   font-size: 10vw;
+  display: none;
 }
