@@ -14,7 +14,8 @@ let canvas0 = new OffscreenCanvas(N, N)
 let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
-let scores = [0, 0]
+let counts = { 1: 0, 2: 0, 3: 0 }
+let gameOver = false
 let nodes = []
 let grid = []
 setupNodes(N)
@@ -35,14 +36,18 @@ const camera = {
 let canvasSize = 1
 
 socket.on('updateClient', (msg) => {
+  console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
   const cursor = msg.team === 1 ? "url('BlueCursor.png') 1 1, pointer" : "url('GreenCursor.png') 1 1, pointer"
   document.body.style.cursor = cursor
   team = msg.team
-  scores = msg.scores
+  counts = msg.counts
   buildTimer = msg.buildTimer
-  blueDiv.innerHTML = scores[1]
-  greenDiv.innerHTML = scores[2]
-  console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
+  gameOver = msg.gameOver
+  const scoreDisplay = gameOver ? 'block' : 'none'
+  blueDiv.style.display = scoreDisplay
+  greenDiv.style.display = scoreDisplay
+  blueDiv.innerHTML = counts[1]
+  greenDiv.innerHTML = counts[2]
 })
 
 socket.on('updateClientState', (msg) => {
@@ -127,7 +132,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log('buildTimer', buildTimer)
+  console.log('counts', counts)
 }
 
 window.onmouseup = function (e) {
@@ -137,6 +142,7 @@ window.onmouseup = function (e) {
 }
 
 window.onkeydown = function (e) {
+  if (e.key === 'Enter') socket.emit('initialize')
   keys.forEach((value, key) => {
     if (e.key === key) keys[value] = true
   })
@@ -194,16 +200,19 @@ function drawState () {
   context1.drawImage(canvas0, -camera.x, -camera.y, w, h)
   if (team === 1) colors.mouse = { r: 0, g: 0.2, b: 0.5 }
   if (team === 2) colors.mouse = { r: 0, g: 0.5, b: 0.2 }
-  const g = (255 * 2 * colors.mouse.g).toFixed(0)
-  const b = (255 * 2 * colors.mouse.b).toFixed(0)
-  context1.strokeStyle = `rgba(0,${g},${b},1)`
-  context1.lineWidth = 0.5 * camera.scale
-  context1.beginPath()
-  const radians = 2 * Math.PI * buildTimer
-  const x = mouse.x * 100 * camera.scale / N + 50 * camera.scale / N - camera.x
-  const y = mouse.y * 100 * camera.scale / N + 50 * camera.scale / N - camera.y
-  context1.arc(x, y, 0.25 * camera.scale, 0, radians)
-  context1.stroke()
+  if (!gameOver) {
+    const g = (255 * 2 * colors.mouse.g).toFixed(0)
+    const b = (255 * 2 * colors.mouse.b).toFixed(0)
+    context1.strokeStyle = `rgba(0,${g},${b},1)`
+    const scale = camera.scale * 100 / N
+    context1.lineWidth = 0.25 * scale
+    context1.beginPath()
+    const radians = 2 * Math.PI * buildTimer
+    const x = mouse.x * scale + 0.5 * scale - camera.x
+    const y = mouse.y * scale + 0.5 * scale - camera.y
+    context1.arc(x, y, 0.3 * scale, 0, radians)
+    context1.stroke()
+  }
 }
 
 function draw () {

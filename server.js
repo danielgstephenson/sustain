@@ -48,28 +48,35 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
-const N = 100
-const buildIntervals = { 1: 3, 2: 3 }
+const N = 80
+const playerBuildInterval = 2
+const redFactor = playerBuildInterval / updateInterval * 5
+const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
 let grid = []
 let nodes = []
 let neighbors = []
+let step = 1
+let gameOver = false
 
 setupNodes()
 
-let counts = { 1: 0, 2: 0 }
-const scores = { 1: 0, 2: 0 }
+let counts = { 1: 0, 2: 0, 3: 0 }
 const players = new Map()
 const sockets = new Map()
 
 function update () {
-  if (counts[1] > 1 && counts[2] <= 1) {
-    scores[1] += 1
-    intialize()
+  step += 1
+  if (!gameOver) {
+    grow()
+    build()
   }
-  if (counts[2] > 1 && counts[1] <= 1) {
-    scores[2] += 1
-    intialize()
+  if (Math.min(counts[1], counts[2], counts[3]) <= 0) {
+    gameOver = true
   }
+  updateClients()
+}
+
+function grow () {
   nodes.forEach(node => {
     node.r = 0
     node.g = 0
@@ -80,9 +87,9 @@ function update () {
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
   })
-  counts = { 1: 0, 2: 0 }
+  const redGrow = step % redFactor === 0 && counts[3] < 0.2 * N * N
+  counts = { 1: 0, 2: 0, 3: 0 }
   nodes.forEach(node => {
-    const grow = [2]
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
       case 'r':
@@ -115,15 +122,15 @@ function update () {
         node.state = 'e'
         break
       case 'e':
-        if (grow.includes(node.b) && node.g <= 1) node.state = 'b'
-        if (grow.includes(node.g) && node.b <= 1) node.state = 'g'
+        if (redGrow && node.r === 3) node.state = 'r'
+        if (node.b === 2 && node.g <= 1) node.state = 'b'
+        if (node.g === 2 && node.b <= 1) node.state = 'g'
         break
     }
     if (node.state === 'b') counts[1] += 1
     if (node.state === 'g') counts[2] += 1
+    if (node.state === 'r') counts[3] += 1
   })
-  build()
-  updateClients()
 }
 
 function build () {
@@ -154,12 +161,9 @@ function updateBuildIntervals () {
   const teamCount1 = playerArray.filter(player => player.team === 1).length
   const teamCount2 = playerArray.filter(player => player.team === 2).length
   const minTeamCount = Math.min(teamCount1, teamCount2)
-  console.log('teamCount1', teamCount1)
-  console.log('teamCount2', teamCount2)
   if (Math.min(teamCount1, teamCount2) > 0) {
-    buildIntervals[1] = 3 * teamCount1 / minTeamCount
-    buildIntervals[2] = 3 * teamCount2 / minTeamCount
-    console.log('buildIntervals', buildIntervals)
+    buildIntervals[1] = playerBuildInterval * teamCount1 / minTeamCount
+    buildIntervals[2] = playerBuildInterval * teamCount2 / minTeamCount
   }
 }
 
@@ -184,7 +188,7 @@ io.on('connection', socket => {
     player.mouse = message.mouse
     const buildTimer = player.buildTimer
     const buildInterval = buildIntervals[player.team]
-    const reply = { team: player.team, mouse: player.mouse, scores, buildTimer, buildInterval }
+    const reply = { team: player.team, mouse: player.mouse, counts, buildTimer, buildInterval, gameOver }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
@@ -193,19 +197,32 @@ io.on('connection', socket => {
     players.delete(socket.id)
     updateBuildIntervals()
   })
+  socket.on('initialize', () => {
+    if (gameOver) intialize()
+  })
 })
 
 function intialize () {
   console.log('initialize')
+  gameOver = false
   nodes.forEach(node => {
     node.state = 'e'
   })
+  range(N).forEach(() => {
+    const i = Math.floor(Math.random() * N)
+    const jB = Math.floor(Math.random() * N)
+    const jG = N - jB - 1
+    if (jB !== jG) {
+      grid[i][jB].state = 'b'
+      grid[i][jG].state = 'g'
+    }
+  })
   let redCount = 0
-  const maxRed = 0.3 * N * N
+  const maxRed = 0.2 * N * N
   range(1000).forEach(() => {
     let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
     let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
-    range(500).forEach(step => {
+    range(200).forEach(step => {
       if (Math.random() < 0.5) {
         i += Math.round(2 * Math.random() - 1)
         i = clamp(0, N - 1, i)
@@ -225,15 +242,6 @@ function intialize () {
         }
       }
     })
-  })
-  range(N).forEach(() => {
-    const i = Math.floor(Math.random() * N)
-    const jB = Math.floor(Math.random() * N)
-    const jG = N - jB - 1
-    if (jB !== jG) {
-      grid[i][jB].state = 'b'
-      grid[i][jG].state = 'g'
-    }
   })
 }
 
