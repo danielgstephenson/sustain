@@ -208,7 +208,7 @@ function drawState () {
     const b = (255 * 2 * colors.mouse.b).toFixed(0)
     context1.strokeStyle = `rgba(0,${g},${b},1)`
     const scale = camera.scale * 100 / N
-    context1.lineWidth = 0.25 * scale
+    context1.lineWidth = 0.5 * scale
     context1.beginPath()
     const radians = 2 * Math.PI * buildTimer
     const x = mouse.x * scale + 0.5 * scale - camera.x
