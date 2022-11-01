@@ -52,6 +52,7 @@ const N = 80
 const playerBuildInterval = 2
 const redFactor = playerBuildInterval / updateInterval * 5
 const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
+const redCursor = { x: 0, y: 0 }
 let grid = []
 let nodes = []
 let neighbors = []
@@ -87,8 +88,9 @@ function grow () {
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
   })
-  const redGrow = step % redFactor === 0 && counts[3] < 0.7 * N * N
+  // const redGrow = step % redFactor === 0 && counts[3] < 0.7 * N * N
   counts = { 1: 0, 2: 0, 3: 0 }
+  let redGrown = false
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
@@ -122,7 +124,12 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (redGrow && node.r === 3) node.state = 'r'
+        if (node.r === 3 && (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x)) && !redGrown) {
+          node.state = 'r'
+          redGrown = true
+          redCursor.y = node.y
+          redCursor.x = node.x
+        }
         if (node.b === 2 && node.g <= 1) node.state = 'b'
         if (node.g === 2 && node.b <= 1) node.state = 'g'
         break
@@ -131,6 +138,11 @@ function grow () {
     if (node.state === 'g') counts[2] += 1
     if (node.state === 'r') counts[3] += 1
   })
+  console.log('redGrown', redGrown)
+  if (!redGrown) {
+    redCursor.x = 0
+    redCursor.y = 0
+  }
 }
 
 function build () {
@@ -152,7 +164,7 @@ function build () {
 
 function updateClients () {
   const states = nodes.map(node => node.state)
-  const msg = { N, states }
+  const msg = { N, states, redCursor }
   io.emit('updateClientState', msg)
 }
 

@@ -18,6 +18,7 @@ let counts = { 1: 0, 2: 0, 3: 0 }
 let gameOver = false
 let nodes = []
 let grid = []
+let redCursor = { x: 0, y: 0 }
 setupNodes(N)
 
 let buildTimer = 0
@@ -59,6 +60,7 @@ socket.on('updateClientState', (msg) => {
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
+  redCursor = msg.redCursor
   msg.states.forEach((state, i) => {
     nodes[i].state = state
   })
@@ -132,7 +134,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log('counts', counts)
+  console.log('redCursor', redCursor)
 }
 
 window.onmouseup = function (e) {
@@ -178,7 +180,8 @@ const colors = {
   b: { r: 0, g: 0.2, b: 1 },
   r: { r: 0.3, g: 0.02, b: 0.02 },
   mouse: { r: 0, g: 0.3, b: 0.3 },
-  selected: { r: 0, g: 0.8, b: 0.8 }
+  selected: { r: 0, g: 0.8, b: 0.8 },
+  redCursor: { r: 1, g: 0, b: 0 }
 }
 
 function drawState () {
@@ -186,7 +189,8 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      const color = colors[node.state]
+      const redCursorNode = node.x === redCursor.x && node.y === redCursor.y
+      const color = redCursorNode ? colors.redCursor : colors[node.state]
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
