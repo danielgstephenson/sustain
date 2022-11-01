@@ -189,8 +189,7 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      const redCursorNode = node.x === redCursor.x && node.y === redCursor.y
-      const color = redCursorNode ? colors.redCursor : colors[node.state]
+      const color = colors[node.state]
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
