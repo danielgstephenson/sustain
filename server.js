@@ -50,13 +50,12 @@ function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
 const N = 80
 const playerBuildInterval = 2
-const redFactor = playerBuildInterval / updateInterval * 5
 const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
 const redCursor = { x: 0, y: 0 }
 let grid = []
 let nodes = []
 let neighbors = []
-let step = 1
+let redBuildStock = 0
 let gameOver = false
 
 setupNodes()
@@ -66,7 +65,6 @@ const players = new Map()
 const sockets = new Map()
 
 function update () {
-  step += 1
   if (!gameOver) {
     grow()
     build()
@@ -93,6 +91,7 @@ function grow () {
   let redGrown = false
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
+    const pastRedCursor = (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x))
     switch (node.state) {
       case 'r':
         if (node.b > 0 || node.g > 0) node.state = 'd3'
@@ -124,11 +123,14 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x)) && !redGrown) {
-          node.state = 'r'
+        if (node.r === 3 && pastRedCursor && !redGrown) {
           redGrown = true
-          redCursor.y = node.y
-          redCursor.x = node.x
+          if (redBuildStock > 0) {
+            node.state = 'r'
+            redBuildStock -= 1
+            redCursor.y = node.y
+            redCursor.x = node.x
+          }
         }
         if (node.b === 2 && node.g <= 1) node.state = 'b'
         if (node.g === 2 && node.b <= 1) node.state = 'g'
@@ -155,7 +157,10 @@ function build () {
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = grid[i][j]
         const state = player.team === 1 ? 'b' : 'g'
-        node.state = state
+        if (node.state !== state) {
+          node.state = state
+          redBuildStock = N * N * 0.1
+        }
       }
     }
   })
@@ -215,6 +220,7 @@ io.on('connection', socket => {
 
 function intialize () {
   console.log('initialize')
+  redBuildStock = 0
   gameOver = false
   nodes.forEach(node => {
     node.state = 'e'

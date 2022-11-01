@@ -215,6 +215,14 @@ function drawState () {
     const y = mouse.y * scale + 0.5 * scale - camera.y
     context1.arc(x, y, 0.3 * scale, 0, radians)
     context1.stroke()
+    context1.strokeStyle = 'rgba(255,0,0,1)'
+    /*
+    context1.beginPath()
+    const redX = redCursor.x * scale + 0.5 * scale - camera.x
+    const redY = redCursor.y * scale + 0.5 * scale - camera.x
+    context1.arc(redX, redY, 0.3 * scale, 0, 2 * Math.PI)
+    context1.stroke()
+    */
   }
 }
 
