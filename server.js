@@ -138,7 +138,6 @@ function grow () {
     if (node.state === 'g') counts[2] += 1
     if (node.state === 'r') counts[3] += 1
   })
-  console.log('redGrown', redGrown)
   if (!redGrown) {
     redCursor.x = 0
     redCursor.y = 0
