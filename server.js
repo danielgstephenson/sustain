@@ -87,7 +87,7 @@ function grow () {
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
   })
-  const redGrow = step % redFactor === 0 && counts[3] < 0.2 * N * N
+  const redGrow = step % redFactor === 0 && counts[3] < 0.7 * N * N
   counts = { 1: 0, 2: 0, 3: 0 }
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
