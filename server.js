@@ -58,8 +58,8 @@ const N = 80
 const playerBuildInterval = 2
 const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
 const redCursor = { x: 0, y: 0 }
-const redFactor = 10
-const maxStartRed = 0.2 * N * N
+const redFactor = 8
+const maxRedStart = 0.35 * N * N
 let step = 0
 let level = 1
 let redBonus = 0
@@ -82,7 +82,7 @@ function update () {
     grow()
     build()
   }
-  if (Math.min(counts[1], counts[2], counts[3] - 0.9 * maxStartRed) <= 0) {
+  if (Math.min(counts[1], counts[2], counts[3] - 0.65 * maxRedStart) <= 0) {
     gameOver = true
     levelComplete = true
   }
@@ -102,7 +102,7 @@ function grow () {
   })
   counts = { 1: 0, 2: 0, 3: 0 }
   let redGrown = false
-  redBonus += 0.5 * Math.log(level)
+  redBonus += 0.3 * level
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     const pastRedCursor = (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x))
@@ -137,7 +137,7 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && pastRedCursor) {
+        if (node.r === 3 && pastRedCursor && step % redFactor === 0) {
           if (redGrown) {
             if (redBonus > 1) {
               node.state = 'r'
@@ -148,7 +148,7 @@ function grow () {
             }
           } else {
             redGrown = true
-            if (redBuildStock > 0 && step % redFactor === 0) {
+            if (redBuildStock > 0) {
               node.state = 'r'
               redBuildStock -= 1
               redCursor.y = node.y
@@ -164,7 +164,7 @@ function grow () {
     if (node.state === 'g') counts[2] += 1
     if (node.state === 'r') counts[3] += 1
   })
-  if (!redGrown) {
+  if (!redGrown && step % redFactor === 0) {
     redCursor.x = 0
     redCursor.y = 0
   }
@@ -278,7 +278,7 @@ function intialize () {
       }
       const j1 = j
       const j2 = N - j1 - 1
-      if (redCount < maxStartRed) {
+      if (redCount < maxRedStart) {
         const node1 = grid[i][j1]
         const node2 = grid[i][j2]
         if (node1.state !== 'r' && node2.state !== 'r') {
