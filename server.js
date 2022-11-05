@@ -8,7 +8,13 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const config = fs.readJSONSync('config.json')
+const configPath = path.join(__dirname, 'config.json')
+const fileExists = fs.existsSync(configPath)
+const config = fileExists ? fs.readJSONSync(configPath) : {}
+if (!fileExists) {
+  config.port = process.env.PORT ?? 3000
+  config.secure = false
+}
 console.log(config)
 
 const app = express()
