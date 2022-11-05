@@ -58,11 +58,17 @@ const N = 80
 const playerBuildInterval = 2
 const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
 const redCursor = { x: 0, y: 0 }
+const redFactor = 10
+const maxStartRed = 0.2 * N * N
+let step = 0
+let level = 1
+let redBonus = 0
 let grid = []
 let nodes = []
 let neighbors = []
 let redBuildStock = 0
 let gameOver = false
+let levelComplete = false
 
 setupNodes()
 
@@ -71,12 +77,14 @@ const players = new Map()
 const sockets = new Map()
 
 function update () {
+  step += 1
   if (!gameOver) {
     grow()
     build()
   }
-  if (Math.min(counts[1], counts[2], counts[3]) <= 0) {
+  if (Math.min(counts[1], counts[2], counts[3] - 0.9 * maxStartRed) <= 0) {
     gameOver = true
+    levelComplete = true
   }
   updateClients()
 }
@@ -92,9 +100,9 @@ function grow () {
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
   })
-  // const redGrow = step % redFactor === 0 && counts[3] < 0.7 * N * N
   counts = { 1: 0, 2: 0, 3: 0 }
   let redGrown = false
+  redBonus += 0.5 * Math.log(level)
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     const pastRedCursor = (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x))
@@ -129,13 +137,23 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && pastRedCursor && !redGrown) {
-          redGrown = true
-          if (redBuildStock > 0) {
-            node.state = 'r'
-            redBuildStock -= 1
-            redCursor.y = node.y
-            redCursor.x = node.x
+        if (node.r === 3 && pastRedCursor) {
+          if (redGrown) {
+            if (redBonus > 1) {
+              node.state = 'r'
+              redBuildStock -= 1
+              redBonus -= 1
+              redCursor.y = node.y
+              redCursor.x = node.x
+            }
+          } else {
+            redGrown = true
+            if (redBuildStock > 0 && step % redFactor === 0) {
+              node.state = 'r'
+              redBuildStock -= 1
+              redCursor.y = node.y
+              redCursor.x = node.x
+            }
           }
         }
         if (node.b === 2 && node.g <= 1) node.state = 'b'
@@ -210,7 +228,9 @@ io.on('connection', socket => {
     player.mouse = message.mouse
     const buildTimer = player.buildTimer
     const buildInterval = buildIntervals[player.team]
-    const reply = { team: player.team, mouse: player.mouse, counts, buildTimer, buildInterval, gameOver }
+    const otherTeam = player.team === 1 ? 2 : 1
+    const win = gameOver && levelComplete && counts[player.team] >= counts[otherTeam]
+    const reply = { team: player.team, mouse: player.mouse, counts, redCursor, buildTimer, buildInterval, gameOver, win, level }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
@@ -220,12 +240,16 @@ io.on('connection', socket => {
     updateBuildIntervals()
   })
   socket.on('initialize', () => {
-    if (gameOver) intialize()
+    if (gameOver) {
+      if (levelComplete) level += 1
+      intialize()
+    }
   })
 })
 
 function intialize () {
   console.log('initialize')
+  levelComplete = false
   redBuildStock = 0
   gameOver = false
   nodes.forEach(node => {
@@ -241,7 +265,6 @@ function intialize () {
     }
   })
   let redCount = 0
-  const maxRed = 0.2 * N * N
   range(1000).forEach(() => {
     let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
     let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
@@ -255,7 +278,7 @@ function intialize () {
       }
       const j1 = j
       const j2 = N - j1 - 1
-      if (redCount < maxRed) {
+      if (redCount < maxStartRed) {
         const node1 = grid[i][j1]
         const node2 = grid[i][j2]
         if (node1.state !== 'r' && node2.state !== 'r') {

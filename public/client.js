@@ -5,6 +5,10 @@ const socket = io()
 
 const blueDiv = document.getElementById('blueDiv')
 const greenDiv = document.getElementById('greenDiv')
+const blueScoreDiv = document.getElementById('blueScoreDiv')
+const greenScoreDiv = document.getElementById('greenScoreDiv')
+const blueNextLevelButton = document.getElementById('blueNextLevelButton')
+const greenNextLevelButton = document.getElementById('greenNextLevelButton')
 
 const canvas1 = document.getElementById('canvas')
 const context1 = canvas1.getContext('2d')
@@ -15,10 +19,13 @@ let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
 let counts = { 1: 0, 2: 0, 3: 0 }
+let redCursor = { x: 0, y: 0 }
+let msgLog = {}
+let level = 1
+let win = false
 let gameOver = false
 let nodes = []
 let grid = []
-let redCursor = { x: 0, y: 0 }
 setupNodes(N)
 
 let buildTimer = 0
@@ -40,15 +47,22 @@ socket.on('updateClient', (msg) => {
   console.log('updateClient delay', (mouse.time - msg.mouse.time) / 1000)
   const cursor = msg.team === 1 ? "url('BlueCursor.png') 1 1, pointer" : "url('GreenCursor.png') 1 1, pointer"
   document.body.style.cursor = cursor
+  msgLog = msg
   team = msg.team
   counts = msg.counts
+  redCursor = msg.redCursor
   buildTimer = msg.buildTimer
   gameOver = msg.gameOver
+  win = msg.win
+  level = msg.level
   const scoreDisplay = gameOver ? 'block' : 'none'
   blueDiv.style.display = scoreDisplay
   greenDiv.style.display = scoreDisplay
-  blueDiv.innerHTML = counts[1]
-  greenDiv.innerHTML = counts[2]
+  blueScoreDiv.innerHTML = counts[1]
+  greenScoreDiv.innerHTML = counts[2]
+  const myNextLevelButton = team === 1 ? blueNextLevelButton : greenNextLevelButton
+  myNextLevelButton.style.display = win ? 'block' : 'none'
+  myNextLevelButton.innerHTML = `Level ${level + 1}`
 })
 
 socket.on('updateClientState', (msg) => {
@@ -60,7 +74,6 @@ socket.on('updateClientState', (msg) => {
     context0.imageSmoothingEnabled = false
     console.log('reset canvas0')
   }
-  redCursor = msg.redCursor
   msg.states.forEach((state, i) => {
     nodes[i].state = state
   })
@@ -93,6 +106,10 @@ keys.set('ArrowLeft', 'left')
 keys.set('ArrowRight', 'right')
 keys.set(' ', 'select')
 keys.set('Enter', 'select')
+
+window.initialize = function () {
+  socket.emit('initialize')
+}
 
 function updateMouse (e) {
   const cx = canvas1.getBoundingClientRect().left
@@ -134,7 +151,7 @@ window.onmousedown = function (e) {
   if (e.button === 1) mouse.down[1] = true
   if (e.button === 2) mouse.down[2] = true
   updateMouse(e)
-  console.log('redCursor', redCursor)
+  console.log('msgLog', msgLog)
 }
 
 window.onmouseup = function (e) {
@@ -189,7 +206,8 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      const color = colors[node.state]
+      let color = colors[node.state]
+      if (node.x === redCursor.x && node.y === redCursor.y) color = colors.redCursor
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b

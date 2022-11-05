@@ -30,3 +30,10 @@ canvas {
   font-size: 10vw;
   display: none;
 }
+.nextLevelButton {
+  display: none;
+  margin: auto;
+  padding: 1vmin;
+  font-size: 3vmin;
+  background: grey;
+}
