@@ -82,7 +82,11 @@ function update () {
     grow()
     build()
   }
-  if (Math.min(counts[1], counts[2], counts[3] - 0.65 * maxRedStart) <= 0) {
+  if (Math.min(counts[1], counts[2]) <= 0) {
+    gameOver = true
+    levelComplete = false
+  }
+  if (counts[3] - 0.65 * maxRedStart <= 0) {
     gameOver = true
     levelComplete = true
   }
@@ -229,8 +233,8 @@ io.on('connection', socket => {
     const buildTimer = player.buildTimer
     const buildInterval = buildIntervals[player.team]
     const otherTeam = player.team === 1 ? 2 : 1
-    const win = gameOver && levelComplete && counts[player.team] >= counts[otherTeam]
-    const reply = { team: player.team, mouse: player.mouse, counts, redCursor, buildTimer, buildInterval, gameOver, win, level }
+    const win = gameOver && counts[player.team] >= counts[otherTeam]
+    const reply = { team: player.team, mouse: player.mouse, counts, redCursor, buildTimer, buildInterval, gameOver, levelComplete, win, level }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {

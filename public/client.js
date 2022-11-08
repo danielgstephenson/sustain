@@ -24,6 +24,7 @@ let msgLog = {}
 let level = 1
 let win = false
 let gameOver = false
+let levelComplete = false
 let nodes = []
 let grid = []
 setupNodes(N)
@@ -53,6 +54,7 @@ socket.on('updateClient', (msg) => {
   redCursor = msg.redCursor
   buildTimer = msg.buildTimer
   gameOver = msg.gameOver
+  levelComplete = msg.levelComplete
   win = msg.win
   level = msg.level
   const scoreDisplay = gameOver ? 'block' : 'none'
@@ -62,7 +64,8 @@ socket.on('updateClient', (msg) => {
   greenScoreDiv.innerHTML = counts[2]
   const myNextLevelButton = team === 1 ? blueNextLevelButton : greenNextLevelButton
   myNextLevelButton.style.display = win ? 'block' : 'none'
-  myNextLevelButton.innerHTML = `Level ${level + 1}`
+  if (levelComplete) myNextLevelButton.innerHTML = `Level ${level + 1}`
+  else myNextLevelButton.innerHTML = `Restart Level ${level}`
 })
 
 socket.on('updateClientState', (msg) => {
