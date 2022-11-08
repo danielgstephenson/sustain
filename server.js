@@ -102,7 +102,7 @@ function grow () {
   })
   counts = { 1: 0, 2: 0, 3: 0 }
   let redGrown = false
-  redBonus += 0.3 * level
+  redBonus += Math.sqrt(level) - 1
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     const pastRedCursor = (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x))
