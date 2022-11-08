@@ -181,7 +181,7 @@ function build () {
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = grid[i][j]
         const state = player.team === 1 ? 'b' : 'g'
-        if (node.state !== state) {
+        if (node.state !== state && node.state !== 'r') {
           node.state = state
           redBuildStock = N * N * 0.1
         }
