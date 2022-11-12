@@ -106,8 +106,7 @@ function grow () {
   })
   counts = { 1: 0, 2: 0, 3: 0 }
   let redGrown = false
-  const root = Math.sqrt(level)
-  const redIncome = (root - 1) / 10
+  const redIncome = (Math.sqrt(level - 1) + 0.2 * (level - 1)) / 10
   redBonus += redIncome
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
