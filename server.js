@@ -63,16 +63,16 @@ const maxRedStart = 0.35 * N * N
 let step = 0
 let level = 1
 let redBonus = 0
+let redBuildStock = 0
 let grid = []
 let nodes = []
 let neighbors = []
-let redBuildStock = 0
 let gameOver = false
 let levelComplete = false
-
+let counts = { 1: 0, 2: 0, 3: 0 }
+const idle = { 1: true, 2: true }
 setupNodes()
 
-let counts = { 1: 0, 2: 0, 3: 0 }
 const players = new Map()
 const sockets = new Map()
 
@@ -82,11 +82,11 @@ function update () {
     grow()
     build()
   }
-  if (Math.min(counts[1], counts[2]) <= 0) {
+  if (Math.min(counts[1] + idle[1], counts[2] + idle[2]) <= 0) {
     gameOver = true
     levelComplete = false
   }
-  if (counts[3] - 0.65 * maxRedStart <= 0) {
+  if (counts[3] <= 0.65 * maxRedStart) {
     gameOver = true
     levelComplete = true
   }
@@ -143,7 +143,7 @@ function grow () {
       case 'e':
         if (node.r === 3 && pastRedCursor && step % redFactor === 0) {
           if (redGrown) {
-            if (redBonus > 1) {
+            if (redBonus > 1 && redBuildStock > 0) {
               node.state = 'r'
               redBuildStock -= 1
               redBonus -= 1
@@ -188,6 +188,8 @@ function build () {
         if (node.state !== state && node.state !== 'r') {
           node.state = state
           redBuildStock = N * N * 0.1
+          idle[player.team] = false
+          counts[player.team] += 1
         }
       }
     }
@@ -253,6 +255,8 @@ io.on('connection', socket => {
 
 function intialize () {
   console.log('initialize')
+  idle[1] = true
+  idle[2] = true
   levelComplete = false
   redBuildStock = 0
   gameOver = false
