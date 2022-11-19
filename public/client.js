@@ -19,7 +19,6 @@ let context0 = canvas0.getContext('2d')
 context0.imageSmoothingEnabled = false
 
 let counts = { 1: 0, 2: 0, 3: 0 }
-let redCursor = { x: 0, y: 0 }
 let msgLog = {}
 let level = 1
 let win = false
@@ -51,7 +50,6 @@ socket.on('updateClient', (msg) => {
   msgLog = msg
   team = msg.team
   counts = msg.counts
-  redCursor = msg.redCursor
   buildTimer = msg.buildTimer
   gameOver = msg.gameOver
   levelComplete = msg.levelComplete
@@ -200,8 +198,7 @@ const colors = {
   b: { r: 0, g: 0.2, b: 1 },
   r: { r: 0.3, g: 0.02, b: 0.02 },
   mouse: { r: 0, g: 0.3, b: 0.3 },
-  selected: { r: 0, g: 0.8, b: 0.8 },
-  redCursor: { r: 1, g: 0, b: 0 }
+  selected: { r: 0, g: 0.8, b: 0.8 }
 }
 
 function drawState () {
@@ -210,7 +207,6 @@ function drawState () {
     const node = nodes[i]
     if (node) {
       let color = colors[node.state]
-      if (node.x === redCursor.x && node.y === redCursor.y) color = colors.redCursor
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
@@ -237,13 +233,6 @@ function drawState () {
     context1.arc(x, y, 0.3 * scale, 0, radians)
     context1.stroke()
     context1.strokeStyle = 'rgba(255,0,0,1)'
-    /*
-    context1.beginPath()
-    const redX = redCursor.x * scale + 0.5 * scale - camera.x
-    const redY = redCursor.y * scale + 0.5 * scale - camera.x
-    context1.arc(redX, redY, 0.3 * scale, 0, 2 * Math.PI)
-    context1.stroke()
-    */
   }
 }
 
