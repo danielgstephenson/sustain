@@ -24,6 +24,8 @@ let level = 1
 let win = false
 let gameOver = false
 let levelComplete = false
+let redBuildPoint = { x: 0, y: 0 }
+let buildIntervals = {}
 let nodes = []
 let grid = []
 setupNodes(N)
@@ -55,6 +57,8 @@ socket.on('updateClient', (msg) => {
   levelComplete = msg.levelComplete
   win = msg.win
   level = msg.level
+  redBuildPoint = msg.redBuildPoint
+  buildIntervals = msg.buildIntervals
   const scoreDisplay = gameOver ? 'block' : 'none'
   blueDiv.style.display = scoreDisplay
   greenDiv.style.display = scoreDisplay
@@ -62,7 +66,7 @@ socket.on('updateClient', (msg) => {
   greenScoreDiv.innerHTML = counts[2]
   const myNextLevelButton = team === 1 ? blueNextLevelButton : greenNextLevelButton
   myNextLevelButton.style.display = win ? 'block' : 'none'
-  if (levelComplete) myNextLevelButton.innerHTML = `Level ${level + 1}`
+  if (levelComplete) myNextLevelButton.innerHTML = `Level ${level}`
   else myNextLevelButton.innerHTML = `Restart Level ${level}`
 })
 
@@ -197,6 +201,7 @@ const colors = {
   g: { r: 0, g: 0.7, b: 0 },
   b: { r: 0, g: 0.2, b: 1 },
   r: { r: 0.3, g: 0.02, b: 0.02 },
+  redBuild: { r: 1, g: 0, b: 0 },
   mouse: { r: 0, g: 0.3, b: 0.3 },
   selected: { r: 0, g: 0.8, b: 0.8 }
 }
@@ -206,7 +211,8 @@ function drawState () {
   range(N * N).forEach(i => {
     const node = nodes[i]
     if (node) {
-      let color = colors[node.state]
+      const redBuild = (node.x === redBuildPoint.x && node.y === redBuildPoint.y)
+      const color = redBuild ? colors.redBuild : colors[node.state]
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b

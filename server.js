@@ -54,14 +54,16 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
+const players = new Map()
+const sockets = new Map()
 const N = 80
 const baseBuildInterval = 2
 const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuildInterval }
 const maxRedStart = 0.05 * N * N
 const redCursor = { x: 0, y: 0 }
+const redBuildPoint = { x: 0, y: 0 }
 let redBuildTimer = 0
 let redBuildStep = 0
-let step = 0
 let level = 1
 let grid = []
 let nodes = []
@@ -72,22 +74,21 @@ let counts = { 1: 0, 2: 0, 3: 0 }
 const idle = { 1: true, 2: true }
 setupNodes()
 
-const players = new Map()
-const sockets = new Map()
-
 function update () {
-  step += 1
   if (!gameOver) {
     grow()
     build()
-  }
-  if (Math.min(counts[1] + idle[1], counts[2] + idle[2]) <= 0) {
-    gameOver = true
-    levelComplete = false
-  }
-  if (counts[3] <= 0) {
-    gameOver = true
-    levelComplete = true
+    if (Math.min(counts[1] + idle[1], counts[2] + idle[2]) <= 0) {
+      gameOver = true
+      levelComplete = false
+    }
+    if (counts[3] <= 10) {
+      gameOver = true
+      console.log('old level', level)
+      level += 1
+      console.log('new level', level)
+      levelComplete = true
+    }
   }
   updateClients()
 }
@@ -205,6 +206,8 @@ function build () {
       node.state = 'r'
       redBuildStep += 1
       counts[3] += 1
+      redBuildPoint.x = redCursor.x
+      redBuildPoint.y = redCursor.y
     }
   }
 }
@@ -220,10 +223,15 @@ function updateBuildIntervals () {
   const teamCount1 = playerArray.filter(player => player.team === 1).length
   const teamCount2 = playerArray.filter(player => player.team === 2).length
   const minTeamCount = Math.min(teamCount1, teamCount2)
-  if (Math.min(teamCount1, teamCount2) > 0) {
+  const maxTeamCount = Math.max(teamCount1, teamCount2)
+  if (minTeamCount > 0) {
     buildIntervals[1] = baseBuildInterval * teamCount1 / minTeamCount
     buildIntervals[2] = baseBuildInterval * teamCount2 / minTeamCount
-    buildIntervals[3] = baseBuildInterval * 0.5 / minTeamCount
+  }
+  if (maxTeamCount > 0) {
+    buildIntervals[3] = baseBuildInterval / (maxTeamCount * 2 ** level)
+    console.log('level', level)
+    console.log('buildIntervals', buildIntervals)
   }
 }
 
@@ -250,7 +258,19 @@ io.on('connection', socket => {
     const buildInterval = buildIntervals[player.team]
     const otherTeam = player.team === 1 ? 2 : 1
     const win = gameOver && counts[player.team] >= counts[otherTeam]
-    const reply = { team: player.team, mouse: player.mouse, counts, buildTimer, buildInterval, gameOver, levelComplete, win, level }
+    const reply = {
+      team: player.team,
+      mouse: player.mouse,
+      counts,
+      buildTimer,
+      buildInterval,
+      gameOver,
+      levelComplete,
+      win,
+      level,
+      redBuildPoint,
+      buildIntervals
+    }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
@@ -261,7 +281,6 @@ io.on('connection', socket => {
   })
   socket.on('initialize', () => {
     if (gameOver) {
-      if (levelComplete) level += 1
       intialize()
     }
   })
@@ -269,6 +288,7 @@ io.on('connection', socket => {
 
 function intialize () {
   console.log('initialize')
+  updateBuildIntervals()
   idle[1] = true
   idle[2] = true
   levelComplete = false
