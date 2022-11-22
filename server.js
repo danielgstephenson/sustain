@@ -229,7 +229,7 @@ function updateBuildIntervals () {
     buildIntervals[2] = baseBuildInterval * teamCount2 / minTeamCount
   }
   if (maxTeamCount > 0) {
-    buildIntervals[3] = baseBuildInterval / (maxTeamCount * 2 ** level)
+    buildIntervals[3] = baseBuildInterval / (maxTeamCount * 1.5 ** level)
     console.log('level', level)
     console.log('buildIntervals', buildIntervals)
   }
