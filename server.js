@@ -59,11 +59,14 @@ const sockets = new Map()
 const N = 80
 const baseBuildInterval = 2
 const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuildInterval }
-const maxRedStart = 0.05 * N * N
-const redCursor = { x: 0, y: 0 }
-const redBuildPoint = { x: 0, y: 0 }
-let redBuildTimer = 0
-let redBuildStep = 0
+const maxPinkStart = 0.05 * N * N
+const maxRedStart = 0.1 * N * N
+const pinkCursor = { x: 0, y: 0 }
+const pinkBuildPoint = { x: 0, y: 0 }
+const redBuildFactor = 100
+let step = 0
+let pinkBuildTimer = 0
+let pinkBuildStep = 0
 let level = 1
 let grid = []
 let nodes = []
@@ -75,6 +78,7 @@ const idle = { 1: true, 2: true }
 setupNodes()
 
 function update () {
+  step += 1
   if (!gameOver) {
     grow()
     build()
@@ -95,29 +99,35 @@ function update () {
 
 function grow () {
   nodes.forEach(node => {
-    node.r = 0
+    node.p = 0
     node.g = 0
     node.b = 0
+    node.r = 0
   })
   nodes.forEach(node => {
-    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
+    node.p = sum(neighbors[node.id].map(node => 1 * (node.state === 'p')))
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
+    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
   })
   counts = { 1: 0, 2: 0, 3: 0 }
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
       case 'r':
-        if (sustain.includes(node.r) && node.b === 0 && node.g === 0) node.state = 'r'
+        if (node.b === 0 && node.g === 0 && node.p === 0) node.state = 'r'
+        else node.state = 'd4'
+        break
+      case 'p':
+        if (sustain.includes(node.p) && node.b === 0 && node.g === 0) node.state = 'p'
         else node.state = 'd4'
         break
       case 'g':
-        if (sustain.includes(node.g) && node.b === 0 && node.r === 0) node.state = 'g'
+        if (sustain.includes(node.g) && node.b === 0 && node.p === 0) node.state = 'g'
         else node.state = 'd4'
         break
       case 'b':
-        if (sustain.includes(node.b) && node.g === 0 && node.r === 0) node.state = 'b'
+        if (sustain.includes(node.b) && node.g === 0 && node.p === 0) node.state = 'b'
         else node.state = 'd4'
         break
       case 'd5':
@@ -139,14 +149,15 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 2 && node.b <= 1 && node.g <= 1) node.state = 'r'
-        if (node.b === 2 && node.g <= 1) node.state = 'b'
-        if (node.g === 2 && node.b <= 1) node.state = 'g'
+        if (node.r === 3 && node.b === 0 && node.g === 0 && node.p === 0 && step % redBuildFactor === 0) node.state = 'r'
+        if (node.p === 2 && node.b === 0 && node.g === 0 && node.r === 0) node.state = 'p'
+        if (node.b === 2 && node.g === 0 && node.r === 0 && node.p === 0) node.state = 'b'
+        if (node.g === 2 && node.b === 0 && node.r === 0 && node.p === 0) node.state = 'g'
         break
     }
     if (node.state === 'b') counts[1] += 1
     if (node.state === 'g') counts[2] += 1
-    if (node.state === 'r') counts[3] += 1
+    if (node.state === 'p') counts[3] += 1
   })
 }
 
@@ -161,7 +172,7 @@ function build () {
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = grid[i][j]
         const state = player.team === 1 ? 'b' : 'g'
-        if (node.state !== state && node.state !== 'r') {
+        if (node.state !== state && node.state !== 'p') {
           node.state = state
           idle[player.team] = false
           counts[player.team] += 1
@@ -170,44 +181,44 @@ function build () {
     }
   })
   const buildInterval = buildIntervals[3]
-  redBuildTimer += updateInterval / buildInterval
+  pinkBuildTimer += updateInterval / buildInterval
   const endReached = nodes.every(node => {
-    const pastOnRow = node.y === redCursor.y && node.x > redCursor.x
-    const belowRow = node.y > redCursor.y
+    const pastOnRow = node.y === pinkCursor.y && node.x > pinkCursor.x
+    const belowRow = node.y > pinkCursor.y
     const pastCursor = pastOnRow || belowRow
-    if (node.state === 'r' && pastCursor) {
-      let offset = redBuildStep % 5 === 0 ? 2 : 1
-      if (redBuildStep % 2 === 0) {
-        if (redBuildStep % 4 === 0) offset = -offset
-        redCursor.x = node.x + offset
-        redCursor.y = node.y
+    if (node.state === 'p' && pastCursor) {
+      let offset = pinkBuildStep % 5 === 0 ? 2 : 1
+      if (pinkBuildStep % 2 === 0) {
+        if (pinkBuildStep % 4 === 0) offset = -offset
+        pinkCursor.x = node.x + offset
+        pinkCursor.y = node.y
       }
-      if (redBuildStep % 2 !== 0) {
-        if (redBuildStep + 1 % 4 === 0) offset = -offset
-        redCursor.x = node.x
-        redCursor.y = node.y + offset
+      if (pinkBuildStep % 2 !== 0) {
+        if (pinkBuildStep + 1 % 4 === 0) offset = -offset
+        pinkCursor.x = node.x
+        pinkCursor.y = node.y + offset
       }
-      redCursor.x = clamp(0, N - 1, redCursor.x)
-      redCursor.y = clamp(0, N - 1, redCursor.y)
+      pinkCursor.x = clamp(0, N - 1, pinkCursor.x)
+      pinkCursor.y = clamp(0, N - 1, pinkCursor.y)
       return false
     }
     return true
   })
   if (endReached) {
-    redCursor.x = 0
-    redCursor.y = 0
+    pinkCursor.x = 0
+    pinkCursor.y = 0
   }
-  if (redBuildTimer > 1) {
-    redBuildTimer = 0
-    const i = redCursor.y
-    const j = redCursor.x
+  if (pinkBuildTimer > 1) {
+    pinkBuildTimer = 0
+    const i = pinkCursor.y
+    const j = pinkCursor.x
     const node = grid[i][j]
     if (node.state !== 'b' && node.state !== 'g') {
-      node.state = 'r'
-      redBuildStep += 1
+      node.state = 'p'
+      pinkBuildStep += 1
       counts[3] += 1
-      redBuildPoint.x = redCursor.x
-      redBuildPoint.y = redCursor.y
+      pinkBuildPoint.x = pinkCursor.x
+      pinkBuildPoint.y = pinkCursor.y
     }
   }
 }
@@ -268,7 +279,7 @@ io.on('connection', socket => {
       levelComplete,
       win,
       level,
-      redBuildPoint,
+      pinkBuildPoint,
       buildIntervals
     }
     socket.emit('updateClient', reply)
@@ -287,6 +298,7 @@ io.on('connection', socket => {
 })
 
 function intialize () {
+  step = 0
   console.log('initialize')
   updateBuildIntervals()
   idle[1] = true
@@ -304,6 +316,31 @@ function intialize () {
       grid[i][jB].state = 'b'
       grid[i][jG].state = 'g'
     }
+  })
+  let pinkCount = 0
+  range(1000).forEach(() => {
+    let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    range(200).forEach(step => {
+      if (Math.random() < 0.5) {
+        i += Math.round(2 * Math.random() - 1)
+        i = clamp(0, N - 1, i)
+      } else {
+        j += Math.round(2 * Math.random() - 1)
+        j = clamp(0, N - 1, j)
+      }
+      const j1 = j
+      const j2 = N - j1 - 1
+      if (pinkCount < maxPinkStart) {
+        const node1 = grid[i][j1]
+        const node2 = grid[i][j2]
+        if (node1.state !== 'p' && node2.state !== 'p') {
+          grid[i][j1].state = 'p'
+          grid[i][j2].state = 'p'
+          pinkCount += 2
+        }
+      }
+    })
   })
   let redCount = 0
   range(1000).forEach(() => {
@@ -336,9 +373,10 @@ function setupNodes () {
   grid = range(N).map(i => range(N).map(j => {
     const node = {
       state: 'e',
-      r: 0,
+      p: 0,
       g: 0,
       b: 0,
+      r: 0,
       x: j,
       y: i,
       selected: { 1: false, 2: false }
