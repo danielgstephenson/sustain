@@ -64,6 +64,7 @@ const maxRedStart = 0.05 * N * N
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
 const redBuildFactor = 100
+const pinkExploreFactor = 10
 let step = 0
 let pinkBuildTimer = 0
 let pinkBuildStep = 0
@@ -187,7 +188,8 @@ function build () {
     const pastOnRow = node.y === pinkCursor.y && node.x > pinkCursor.x
     const belowRow = node.y > pinkCursor.y
     const pastCursor = pastOnRow || belowRow
-    if (node.state === 'p' && pastCursor) {
+    const goodOrigin = node.state === 'p' || step % pinkExploreFactor === 0
+    if (goodOrigin && pastCursor) {
       let offset = pinkBuildStep % 5 === 0 ? 2 : 1
       if (pinkBuildStep % 2 === 0) {
         if (pinkBuildStep % 4 === 0) offset = -offset
