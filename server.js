@@ -60,7 +60,7 @@ const N = 80
 const baseBuildInterval = 2
 const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuildInterval }
 const maxPinkStart = 0.05 * N * N
-const maxRedStart = 0.1 * N * N
+const maxRedStart = 0.05 * N * N
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
 const redBuildFactor = 100
@@ -73,7 +73,7 @@ let nodes = []
 let neighbors = []
 let gameOver = false
 let levelComplete = false
-let counts = { 1: 0, 2: 0, 3: 0 }
+let counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
 const idle = { 1: true, 2: true }
 setupNodes()
 
@@ -86,7 +86,7 @@ function update () {
       gameOver = true
       levelComplete = false
     }
-    if (counts[3] <= 10) {
+    if (counts[3] <= 10 || counts[4] <= 10) {
       gameOver = true
       console.log('old level', level)
       level += 1
@@ -110,7 +110,7 @@ function grow () {
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
     node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
   })
-  counts = { 1: 0, 2: 0, 3: 0 }
+  counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
   nodes.forEach(node => {
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
@@ -158,6 +158,7 @@ function grow () {
     if (node.state === 'b') counts[1] += 1
     if (node.state === 'g') counts[2] += 1
     if (node.state === 'p') counts[3] += 1
+    if (node.state === 'r') counts[4] += 1
   })
 }
 
