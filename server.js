@@ -59,11 +59,13 @@ const sockets = new Map()
 const N = 80
 const baseBuildInterval = 2
 const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuildInterval }
-const maxPinkStart = 0.05 * N * N
-const maxRedStart = 0.05 * N * N
+
+const maxPlayerStart = 30
+const maxPinkStart = 30
+const maxRedStart = 300
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
-const redBuildFactor = 100
+const redBuildFactor = 75
 const pinkExploreFactor = 10
 let step = 0
 let pinkBuildTimer = 0
@@ -151,9 +153,9 @@ function grow () {
         break
       case 'e':
         if (node.r === 3 && node.b === 0 && node.g === 0 && node.p === 0 && step % redBuildFactor === 0) node.state = 'r'
-        if (node.p === 2 && node.b === 0 && node.g === 0 && node.r === 0) node.state = 'p'
-        if (node.b === 2 && node.g === 0 && node.r === 0 && node.p === 0) node.state = 'b'
-        if (node.g === 2 && node.b === 0 && node.r === 0 && node.p === 0) node.state = 'g'
+        if (node.p === 2) node.state = 'p'
+        if (node.b === 2 && node.g === 0) node.state = 'b'
+        if (node.g === 2 && node.b === 0) node.state = 'g'
         break
     }
     if (node.state === 'b') counts[1] += 1
@@ -311,7 +313,7 @@ function intialize () {
   nodes.forEach(node => {
     node.state = 'e'
   })
-  range(N).forEach(() => {
+  range(maxPlayerStart).forEach(() => {
     const i = Math.floor(Math.random() * N)
     const jB = Math.floor(Math.random() * N)
     const jG = N - jB - 1
@@ -322,34 +324,21 @@ function intialize () {
   })
   let pinkCount = 0
   range(1000).forEach(() => {
-    let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
-    let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
-    range(200).forEach(step => {
-      if (Math.random() < 0.5) {
-        i += Math.round(2 * Math.random() - 1)
-        i = clamp(0, N - 1, i)
-      } else {
-        j += Math.round(2 * Math.random() - 1)
-        j = clamp(0, N - 1, j)
+    const i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    const j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    if (pinkCount < maxPinkStart) {
+      const node = grid[i][j]
+      if (node.state !== 'p') {
+        grid[i][j].state = 'p'
+        pinkCount += 1
       }
-      const j1 = j
-      const j2 = N - j1 - 1
-      if (pinkCount < maxPinkStart) {
-        const node1 = grid[i][j1]
-        const node2 = grid[i][j2]
-        if (node1.state !== 'p' && node2.state !== 'p') {
-          grid[i][j1].state = 'p'
-          grid[i][j2].state = 'p'
-          pinkCount += 2
-        }
-      }
-    })
+    }
   })
   let redCount = 0
   range(1000).forEach(() => {
     let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
     let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
-    range(200).forEach(step => {
+    range(50).forEach(step => {
       if (Math.random() < 0.5) {
         i += Math.round(2 * Math.random() - 1)
         i = clamp(0, N - 1, i)
