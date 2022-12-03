@@ -1,6 +1,6 @@
-# fly.toml file generated for sustain on 2022-11-05T12:25:11-04:00
+# fly.toml file generated for playsustain on 2022-11-16T19:55:40+01:00
 
-app = "sustain"
+app = "playsustain"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
