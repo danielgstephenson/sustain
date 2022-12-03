@@ -63,9 +63,10 @@ const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuil
 const maxPlayerStart = 30
 const maxPinkStart = 60
 const maxRedStart = 500
+const redCursor = { x: 0, y: 0 }
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
-const redBuildFactor = 30
+const redBuildFactor = 2
 const pinkExploreFactor = 10
 let step = 0
 let pinkBuildTimer = 0
@@ -117,9 +118,12 @@ function grow () {
   const redStep = step % redBuildFactor === 0
   const redSmall = counts[4] < 400
   const redBig = counts[4] > 1000
-  const redBuild = (redStep || redSmall) && !redBig
+  let redBuild = (redStep || redSmall) && !redBig
   counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
   nodes.forEach(node => {
+    const rightOfRedCursor = node.y === redCursor.y && node.x > redCursor.x
+    const belowRedCursor = node.y > redCursor.y
+    const pastRedCursor = rightOfRedCursor || belowRedCursor
     const sustain = [0, 3, 4, 5]
     switch (node.state) {
       case 'r':
@@ -157,7 +161,12 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && redBuild) node.state = 'r'
+        if (node.r === 3 && redBuild && pastRedCursor) {
+          node.state = 'r'
+          redCursor.x = node.x
+          redCursor.y = node.y
+          redBuild = false
+        }
         if (node.p === 2) node.state = 'p'
         if (node.b === 2 && node.g === 0) node.state = 'b'
         if (node.g === 2 && node.b === 0) node.state = 'g'
