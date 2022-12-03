@@ -177,6 +177,10 @@ function grow () {
     if (node.state === 'p') counts[3] += 1
     if (node.state === 'r') counts[4] += 1
   })
+  if (redBuild) {
+    redCursor.x = 0
+    redCursor.y = 0
+  }
 }
 
 function build () {
@@ -299,6 +303,7 @@ io.on('connection', socket => {
       win,
       level,
       pinkBuildPoint,
+      redCursor,
       buildIntervals
     }
     socket.emit('updateClient', reply)
