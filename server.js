@@ -96,6 +96,8 @@ function update () {
       if (counts[3] <= 10) pinkLevel += 1
       if (counts[4] <= 10) redLevel += 1
       levelComplete = true
+      console.log('pinkLevel', pinkLevel)
+      console.log('redLevel', redLevel)
     }
   }
   updateClients()

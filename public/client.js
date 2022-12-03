@@ -61,6 +61,8 @@ socket.on('updateClient', (msg) => {
   redLevel = msg.redLevel
   pinkBuildPoint = msg.pinkBuildPoint
   redCursor = msg.redCursor
+  console.log('pinkLevel', pinkLevel)
+  console.log('redLevel', redLevel)
   const scoreDisplay = gameOver ? 'block' : 'none'
   blueDiv.style.display = scoreDisplay
   greenDiv.style.display = scoreDisplay
