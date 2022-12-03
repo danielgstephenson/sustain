@@ -225,7 +225,7 @@ function drawState () {
       if (pinkBuild) color = colors.pinkBuild
       if (redBuild) color = colors.redBuild
       if (node.state === 'p' && pinkLost) color = colors.pinkBuild
-      if (node.state === 'r' && redLost) color = colors.redCursor
+      if (node.state === 'r' && redLost) color = colors.redBuild
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
