@@ -66,7 +66,7 @@ const maxRedStart = 500
 const redCursor = { x: 0, y: 0 }
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
-const redBuildFactor = 2
+const redBuildFactor = 3
 const pinkExploreFactor = 10
 let step = 0
 let pinkBuildTimer = 0
@@ -259,7 +259,7 @@ function updateBuildIntervals () {
     buildIntervals[2] = baseBuildInterval * teamCount2 / minTeamCount
   }
   if (maxTeamCount > 0) {
-    buildIntervals[3] = baseBuildInterval / (maxTeamCount * 1.5 ** level)
+    buildIntervals[3] = 2 * baseBuildInterval / (maxTeamCount * 1.5 ** level)
     console.log('level', level)
     console.log('buildIntervals', buildIntervals)
   }
