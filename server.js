@@ -164,8 +164,8 @@ function grow () {
           redBuild = false
         }
         if (node.p === 2) node.state = 'p'
-        if (node.b === 2 && node.g === 0) node.state = 'b'
-        if (node.g === 2 && node.b === 0) node.state = 'g'
+        if (node.b === 2 && node.g !== 2) node.state = 'b'
+        if (node.g === 2 && node.b !== 2) node.state = 'g'
         break
     }
     if (node.state === 'b') counts[1] += 1
