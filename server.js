@@ -54,73 +54,98 @@ function range (n) { return [...Array(n).keys()] }
 function sum (array) { return array.reduce((a, b) => a + b, 0) }
 function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
 
+const players = new Map()
+const sockets = new Map()
 const N = 80
-const playerBuildInterval = 2
-const buildIntervals = { 1: playerBuildInterval, 2: playerBuildInterval }
+const baseBuildInterval = 2
+const buildIntervals = { 1: baseBuildInterval, 2: baseBuildInterval, 3: baseBuildInterval }
+
+const maxPlayerStart = 30
+const maxPinkStart = 60
+const maxRedStart = 500
 const redCursor = { x: 0, y: 0 }
-const redFactor = 8
-const maxRedStart = 0.35 * N * N
+const pinkCursor = { x: 0, y: 0 }
+const pinkBuildPoint = { x: 0, y: 0 }
+const redBuildFactor = 5
+const pinkExploreFactor = 10
 let step = 0
-let level = 1
-let redBonus = 0
-let redBuildStock = 0
+let pinkBuildTimer = 0
+let pinkBuildStep = 0
+let pinkLevel = 1
+let redLevel = 1
+let redLost = false
+let pinkLost = false
 let grid = []
 let nodes = []
 let neighbors = []
 let gameOver = false
 let levelComplete = false
-let counts = { 1: 0, 2: 0, 3: 0 }
+let counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
 const idle = { 1: true, 2: true }
 setupNodes()
-
-const players = new Map()
-const sockets = new Map()
 
 function update () {
   step += 1
   if (!gameOver) {
     grow()
     build()
-  }
-  if (Math.min(counts[1] + idle[1], counts[2] + idle[2]) <= 0) {
-    gameOver = true
-    levelComplete = false
-  }
-  if (counts[3] <= 0.65 * maxRedStart) {
-    gameOver = true
-    levelComplete = true
+    if (Math.min(counts[1] + idle[1], counts[2] + idle[2]) <= 0) {
+      gameOver = true
+      levelComplete = false
+    }
+    if (counts[3] <= 10 || counts[4] <= 10) {
+      gameOver = true
+      if (counts[3] <= 10) {
+        pinkLevel += 1
+        pinkLost = true
+      }
+      if (counts[4] <= 10) {
+        redLevel += 1
+        redLost = true
+      }
+      levelComplete = true
+      console.log('pinkLevel', pinkLevel)
+      console.log('redLevel', redLevel)
+    }
   }
   updateClients()
 }
 
 function grow () {
   nodes.forEach(node => {
-    node.r = 0
+    node.p = 0
     node.g = 0
     node.b = 0
+    node.r = 0
   })
   nodes.forEach(node => {
-    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
+    node.p = sum(neighbors[node.id].map(node => 1 * (node.state === 'p')))
     node.g = sum(neighbors[node.id].map(node => 1 * (node.state === 'g')))
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
+    node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
   })
-  counts = { 1: 0, 2: 0, 3: 0 }
-  let redGrown = false
-  const redIncome = (Math.sqrt(level - 1) + 0.2 * (level - 1)) / 10
-  redBonus += redIncome
+  let redBuild = redLevel * (step % redBuildFactor === 0)
+  counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
   nodes.forEach(node => {
+    const rightOfRedCursor = node.y === redCursor.y && node.x > redCursor.x
+    const belowRedCursor = node.y > redCursor.y
+    const pastRedCursor = rightOfRedCursor || belowRedCursor
     const sustain = [0, 3, 4, 5]
-    const pastRedCursor = (node.y > redCursor.y || (node.y === redCursor.y && node.x > redCursor.x))
     switch (node.state) {
       case 'r':
-        if (node.b > 0 || node.g > 0) node.state = 'd3'
+        if (node.b === 0 && node.g === 0 && node.p === 0) node.state = 'r'
+        else node.state = 'd4'
+        break
+      case 'p':
+        if (sustain.includes(node.p) && node.b === 0 && node.g === 0) node.state = 'p'
+        else node.state = 'd4'
         break
       case 'g':
-        if (sustain.includes(node.g) && node.b === 0 && node.r === 0) node.state = 'g'
+        if (sustain.includes(node.g) && node.b === 0 && node.p === 0) node.state = 'g'
         else node.state = 'd4'
         break
       case 'b':
-        if (sustain.includes(node.b) && node.g === 0 && node.r === 0) node.state = 'b'
+        if (sustain.includes(node.b) && node.g === 0 && node.p === 0) node.state = 'b'
         else node.state = 'd4'
         break
       case 'd5':
@@ -142,34 +167,23 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && pastRedCursor && step % redFactor === 0) {
-          if (redGrown) {
-            if (redBonus > 1 && redBuildStock > 0) {
-              node.state = 'r'
-              redBuildStock -= 1
-              redBonus -= 1
-              redCursor.y = node.y
-              redCursor.x = node.x
-            }
-          } else {
-            redGrown = true
-            if (redBuildStock > 0) {
-              node.state = 'r'
-              redBuildStock -= 1
-              redCursor.y = node.y
-              redCursor.x = node.x
-            }
-          }
+        if (node.r === 3 && redBuild > 0 && pastRedCursor) {
+          node.state = 'r'
+          redCursor.x = node.x
+          redCursor.y = node.y
+          redBuild -= 1
         }
-        if (node.b === 2 && node.g <= 1) node.state = 'b'
-        if (node.g === 2 && node.b <= 1) node.state = 'g'
+        if (node.p === 2) node.state = 'p'
+        if (node.b === 2 && node.g !== 2) node.state = 'b'
+        if (node.g === 2 && node.b !== 2) node.state = 'g'
         break
     }
     if (node.state === 'b') counts[1] += 1
     if (node.state === 'g') counts[2] += 1
-    if (node.state === 'r') counts[3] += 1
+    if (node.state === 'p') counts[3] += 1
+    if (node.state === 'r') counts[4] += 1
   })
-  if (!redGrown && step % redFactor === 0) {
+  if (redBuild > 0) {
     redCursor.x = 0
     redCursor.y = 0
   }
@@ -186,20 +200,61 @@ function build () {
       if (i >= 0 && i < N && j >= 0 && j < N) {
         const node = grid[i][j]
         const state = player.team === 1 ? 'b' : 'g'
-        if (node.state !== state && node.state !== 'r') {
+        if (node.state !== state && node.state !== 'p') {
           node.state = state
-          redBuildStock = N * N * 0.1
           idle[player.team] = false
           counts[player.team] += 1
         }
       }
     }
   })
+  const buildInterval = buildIntervals[3]
+  pinkBuildTimer += updateInterval / buildInterval
+  const endReached = nodes.every(node => {
+    const pastOnRow = node.y === pinkCursor.y && node.x > pinkCursor.x
+    const belowRow = node.y > pinkCursor.y
+    const pastCursor = pastOnRow || belowRow
+    const goodOrigin = node.state === 'p' || step % pinkExploreFactor === 0
+    if (goodOrigin && pastCursor) {
+      let offset = pinkBuildStep % 5 === 0 ? 2 : 1
+      if (pinkBuildStep % 2 === 0) {
+        if (pinkBuildStep % 4 === 0) offset = -offset
+        pinkCursor.x = node.x + offset
+        pinkCursor.y = node.y
+      }
+      if (pinkBuildStep % 2 !== 0) {
+        if (pinkBuildStep + 1 % 4 === 0) offset = -offset
+        pinkCursor.x = node.x
+        pinkCursor.y = node.y + offset
+      }
+      pinkCursor.x = clamp(0, N - 1, pinkCursor.x)
+      pinkCursor.y = clamp(0, N - 1, pinkCursor.y)
+      return false
+    }
+    return true
+  })
+  if (endReached) {
+    pinkCursor.x = 0
+    pinkCursor.y = 0
+  }
+  if (pinkBuildTimer > 1) {
+    pinkBuildTimer = 0
+    const i = pinkCursor.y
+    const j = pinkCursor.x
+    const node = grid[i][j]
+    if (node.state !== 'b' && node.state !== 'g') {
+      node.state = 'p'
+      pinkBuildStep += 1
+      counts[3] += 1
+      pinkBuildPoint.x = pinkCursor.x
+      pinkBuildPoint.y = pinkCursor.y
+    }
+  }
 }
 
 function updateClients () {
   const states = nodes.map(node => node.state)
-  const msg = { N, states, redCursor }
+  const msg = { N, states }
   io.emit('updateClientState', msg)
 }
 
@@ -208,9 +263,13 @@ function updateBuildIntervals () {
   const teamCount1 = playerArray.filter(player => player.team === 1).length
   const teamCount2 = playerArray.filter(player => player.team === 2).length
   const minTeamCount = Math.min(teamCount1, teamCount2)
-  if (Math.min(teamCount1, teamCount2) > 0) {
-    buildIntervals[1] = playerBuildInterval * teamCount1 / minTeamCount
-    buildIntervals[2] = playerBuildInterval * teamCount2 / minTeamCount
+  const maxTeamCount = Math.max(teamCount1, teamCount2)
+  if (minTeamCount > 0) {
+    buildIntervals[1] = baseBuildInterval * teamCount1 / minTeamCount
+    buildIntervals[2] = baseBuildInterval * teamCount2 / minTeamCount
+  }
+  if (maxTeamCount > 0) {
+    buildIntervals[3] = 2 * baseBuildInterval / (maxTeamCount * 1.5 ** pinkLevel)
   }
 }
 
@@ -237,7 +296,23 @@ io.on('connection', socket => {
     const buildInterval = buildIntervals[player.team]
     const otherTeam = player.team === 1 ? 2 : 1
     const win = gameOver && counts[player.team] >= counts[otherTeam]
-    const reply = { team: player.team, mouse: player.mouse, counts, redCursor, buildTimer, buildInterval, gameOver, levelComplete, win, level }
+    const reply = {
+      team: player.team,
+      mouse: player.mouse,
+      counts,
+      buildTimer,
+      buildInterval,
+      gameOver,
+      levelComplete,
+      win,
+      pinkLevel,
+      redLevel,
+      pinkLost,
+      redLost,
+      pinkBuildPoint,
+      redCursor,
+      buildIntervals
+    }
     socket.emit('updateClient', reply)
   })
   socket.on('disconnect', () => {
@@ -248,23 +323,25 @@ io.on('connection', socket => {
   })
   socket.on('initialize', () => {
     if (gameOver) {
-      if (levelComplete) level += 1
       intialize()
     }
   })
 })
 
 function intialize () {
+  step = 0
   console.log('initialize')
+  updateBuildIntervals()
   idle[1] = true
   idle[2] = true
+  redLost = false
+  pinkLost = false
   levelComplete = false
-  redBuildStock = 0
   gameOver = false
   nodes.forEach(node => {
     node.state = 'e'
   })
-  range(N).forEach(() => {
+  range(maxPlayerStart).forEach(() => {
     const i = Math.floor(Math.random() * N)
     const jB = Math.floor(Math.random() * N)
     const jG = N - jB - 1
@@ -273,11 +350,23 @@ function intialize () {
       grid[i][jG].state = 'g'
     }
   })
+  let pinkCount = 0
+  range(1000).forEach(() => {
+    const i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    const j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
+    if (pinkCount < maxPinkStart) {
+      const node = grid[i][j]
+      if (node.state !== 'p') {
+        grid[i][j].state = 'p'
+        pinkCount += 1
+      }
+    }
+  })
   let redCount = 0
   range(1000).forEach(() => {
     let i = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
     let j = Math.floor(0.5 * N + 0.9 * (0.5 - Math.random()) * N)
-    range(200).forEach(step => {
+    range(50).forEach(step => {
       if (Math.random() < 0.5) {
         i += Math.round(2 * Math.random() - 1)
         i = clamp(0, N - 1, i)
@@ -304,9 +393,10 @@ function setupNodes () {
   grid = range(N).map(i => range(N).map(j => {
     const node = {
       state: 'e',
-      r: 0,
+      p: 0,
       g: 0,
       b: 0,
+      r: 0,
       x: j,
       y: i,
       selected: { 1: false, 2: false }
