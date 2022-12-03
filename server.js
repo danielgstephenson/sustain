@@ -73,6 +73,8 @@ let pinkBuildTimer = 0
 let pinkBuildStep = 0
 let pinkLevel = 1
 let redLevel = 1
+let redLost = false
+let pinkLost = false
 let grid = []
 let nodes = []
 let neighbors = []
@@ -93,8 +95,14 @@ function update () {
     }
     if (counts[3] <= 10 || counts[4] <= 10) {
       gameOver = true
-      if (counts[3] <= 10) pinkLevel += 1
-      if (counts[4] <= 10) redLevel += 1
+      if (counts[3] <= 10) {
+        pinkLevel += 1
+        pinkLost = true
+      }
+      if (counts[4] <= 10) {
+        redLevel += 1
+        redLost = true
+      }
       levelComplete = true
       console.log('pinkLevel', pinkLevel)
       console.log('redLevel', redLevel)
@@ -299,6 +307,8 @@ io.on('connection', socket => {
       win,
       pinkLevel,
       redLevel,
+      pinkLost,
+      redLost,
       pinkBuildPoint,
       redCursor,
       buildIntervals
@@ -324,6 +334,8 @@ function intialize () {
   updateBuildIntervals()
   idle[1] = true
   idle[2] = true
+  redLost = false
+  pinkLost = false
   levelComplete = false
   gameOver = false
   nodes.forEach(node => {

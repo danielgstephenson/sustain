@@ -22,6 +22,8 @@ let counts = { 1: 0, 2: 0, 3: 0 }
 let msgLog = {}
 let pinkLevel = 1
 let redLevel = 1
+let pinkLost = false
+let redLost = false
 let win = false
 let gameOver = false
 let levelComplete = false
@@ -59,10 +61,10 @@ socket.on('updateClient', (msg) => {
   win = msg.win
   pinkLevel = msg.pinkLevel
   redLevel = msg.redLevel
+  pinkLost = msg.pinkLost
+  redLost = msg.redLost
   pinkBuildPoint = msg.pinkBuildPoint
   redCursor = msg.redCursor
-  console.log('pinkLevel', pinkLevel)
-  console.log('redLevel', redLevel)
   const scoreDisplay = gameOver ? 'block' : 'none'
   blueDiv.style.display = scoreDisplay
   greenDiv.style.display = scoreDisplay
@@ -205,8 +207,8 @@ const colors = {
   g: { r: 0, g: 0.7, b: 0 },
   b: { r: 0, g: 0.2, b: 1 },
   r: { r: 0.5, g: 0.0, b: 0.0 },
-  p: { r: 0.8, g: 0.3, b: 0.5 },
-  pinkBuild: { r: 1, g: 0.1, b: 0.7 },
+  p: { r: 0.7, g: 0.2, b: 0.4 },
+  pinkBuild: { r: 1, g: 0, b: 1 },
   redBuild: { r: 1, g: 0, b: 0 },
   mouse: { r: 0, g: 0.3, b: 0.3 },
   selected: { r: 0, g: 0.8, b: 0.8 }
@@ -222,6 +224,8 @@ function drawState () {
       let color = colors[node.state]
       if (pinkBuild) color = colors.pinkBuild
       if (redBuild) color = colors.redBuild
+      if (node.state === 'p' && pinkLost) color = colors.pinkBuild
+      if (node.state === 'r' && redLost) color = colors.redCursor
       imageData.data[i * 4 + 0] = 255 * color.r
       imageData.data[i * 4 + 1] = 255 * color.g
       imageData.data[i * 4 + 2] = 255 * color.b
