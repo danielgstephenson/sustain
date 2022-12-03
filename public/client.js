@@ -218,7 +218,7 @@ function drawState () {
     const node = nodes[i]
     if (node) {
       const pinkBuild = (node.x === pinkBuildPoint.x && node.y === pinkBuildPoint.y)
-      const redBuild = (node.x === redCursor.x && node.y === redCursor.y)
+      const redBuild = (node.x === redCursor.x && node.y === redCursor.y) && node.x * node.y > 0
       let color = colors[node.state]
       if (pinkBuild) color = colors.pinkBuild
       if (redBuild) color = colors.redBuild
