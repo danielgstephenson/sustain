@@ -114,11 +114,7 @@ function grow () {
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
     node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
   })
-
-  const redStep = step % redBuildFactor === 0
-  const redSmall = counts[4] < 400
-  const redBig = counts[4] > 1000
-  let redBuild = (redStep || redSmall) && !redBig
+  let redBuild = step % redBuildFactor === 0
   counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
   nodes.forEach(node => {
     const rightOfRedCursor = node.y === redCursor.y && node.x > redCursor.x
