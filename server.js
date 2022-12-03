@@ -66,12 +66,13 @@ const maxRedStart = 500
 const redCursor = { x: 0, y: 0 }
 const pinkCursor = { x: 0, y: 0 }
 const pinkBuildPoint = { x: 0, y: 0 }
-const redBuildFactor = 3
+const redBuildFactor = 4
 const pinkExploreFactor = 10
 let step = 0
 let pinkBuildTimer = 0
 let pinkBuildStep = 0
-let level = 1
+let pinkLevel = 1
+let redLevel = 1
 let grid = []
 let nodes = []
 let neighbors = []
@@ -92,9 +93,8 @@ function update () {
     }
     if (counts[3] <= 10 || counts[4] <= 10) {
       gameOver = true
-      console.log('old level', level)
-      level += 1
-      console.log('new level', level)
+      if (counts[3] <= 10) pinkLevel += 1
+      if (counts[4] <= 10) redLevel += 1
       levelComplete = true
     }
   }
@@ -114,7 +114,7 @@ function grow () {
     node.b = sum(neighbors[node.id].map(node => 1 * (node.state === 'b')))
     node.r = sum(neighbors[node.id].map(node => 1 * (node.state === 'r')))
   })
-  let redBuild = step % redBuildFactor === 0
+  let redBuild = redLevel * (step % redBuildFactor === 0)
   counts = { 1: 0, 2: 0, 3: 0, 4: 0 }
   nodes.forEach(node => {
     const rightOfRedCursor = node.y === redCursor.y && node.x > redCursor.x
@@ -157,11 +157,11 @@ function grow () {
         node.state = 'e'
         break
       case 'e':
-        if (node.r === 3 && redBuild && pastRedCursor) {
+        if (node.r === 3 && redBuild > 0 && pastRedCursor) {
           node.state = 'r'
           redCursor.x = node.x
           redCursor.y = node.y
-          redBuild = false
+          redBuild -= 1
         }
         if (node.p === 2) node.state = 'p'
         if (node.b === 2 && node.g !== 2) node.state = 'b'
@@ -173,7 +173,7 @@ function grow () {
     if (node.state === 'p') counts[3] += 1
     if (node.state === 'r') counts[4] += 1
   })
-  if (redBuild) {
+  if (redBuild > 0) {
     redCursor.x = 0
     redCursor.y = 0
   }
@@ -259,9 +259,7 @@ function updateBuildIntervals () {
     buildIntervals[2] = baseBuildInterval * teamCount2 / minTeamCount
   }
   if (maxTeamCount > 0) {
-    buildIntervals[3] = 2 * baseBuildInterval / (maxTeamCount * 1.5 ** level)
-    console.log('level', level)
-    console.log('buildIntervals', buildIntervals)
+    buildIntervals[3] = 2 * baseBuildInterval / (maxTeamCount * 1.5 ** pinkLevel)
   }
 }
 
@@ -297,7 +295,8 @@ io.on('connection', socket => {
       gameOver,
       levelComplete,
       win,
-      level,
+      pinkLevel,
+      redLevel,
       pinkBuildPoint,
       redCursor,
       buildIntervals

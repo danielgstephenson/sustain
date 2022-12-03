@@ -20,7 +20,8 @@ context0.imageSmoothingEnabled = false
 
 let counts = { 1: 0, 2: 0, 3: 0 }
 let msgLog = {}
-let level = 1
+let pinkLevel = 1
+let redLevel = 1
 let win = false
 let gameOver = false
 let levelComplete = false
@@ -56,7 +57,8 @@ socket.on('updateClient', (msg) => {
   gameOver = msg.gameOver
   levelComplete = msg.levelComplete
   win = msg.win
-  level = msg.level
+  pinkLevel = msg.pinkLevel
+  redLevel = msg.redLevel
   pinkBuildPoint = msg.pinkBuildPoint
   redCursor = msg.redCursor
   const scoreDisplay = gameOver ? 'block' : 'none'
@@ -66,8 +68,8 @@ socket.on('updateClient', (msg) => {
   greenScoreDiv.innerHTML = counts[2]
   const myNextLevelButton = team === 1 ? blueNextLevelButton : greenNextLevelButton
   myNextLevelButton.style.display = win ? 'block' : 'none'
-  if (levelComplete) myNextLevelButton.innerHTML = `Level ${level}`
-  else myNextLevelButton.innerHTML = `Restart Level ${level}`
+  if (levelComplete) myNextLevelButton.innerHTML = `Level ${pinkLevel + redLevel - 1}`
+  else myNextLevelButton.innerHTML = `Restart Level ${pinkLevel + redLevel - 1}`
 })
 
 socket.on('updateClientState', (msg) => {
