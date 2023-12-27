@@ -4,20 +4,15 @@
     <meta charset="utf-8"/>
     <title>Sustain</title>
     <link rel="stylesheet" href="client.css">
+    <link rel="icon" type="image/x-icon" href="circle.ico">
   </head>
   <body style="background-color:black;">
     <div id="mainDiv">
-      <div id="blueDiv">
-        <div id="blueScoreDiv"> 0 </div>
-        <button id="blueNextLevelButton" class="nextLevelButton" onClick="initialize()">Level 2</button>
-      </div> 
-      <div id="canvasDiv" >
-        <canvas id="canvas" width="300" height="300"></canvas>
+      <div id="blueDiv"></div> 
+      <div id="mapDiv" >
+        <canvas id="mapCanvas" width="300" height="300"></canvas>
       </div>
-      <div id="greenDiv">
-        <div id="greenScoreDiv"> 0 </div>
-        <button id="greenNextLevelButton" class="nextLevelButton" onClick="initialize()">Level 2</button>
-      </div>
+      <div id="greenDiv"></div>
     </div>
     <script src="client.js" type="module"></script>
   </body>

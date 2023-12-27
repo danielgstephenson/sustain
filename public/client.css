@@ -8,7 +8,7 @@ body {
   align-items: center;
   cursor: url('cursor.png'), pointer;
 }
-canvas { 
+#mapCanvas { 
   margin-top: 0vmin;
   border: 1px solid hsl(180, 10%, 10%);
 }
@@ -29,11 +29,4 @@ canvas {
   margin-top: 20vh;
   font-size: 10vw;
   display: none;
-}
-.nextLevelButton {
-  display: none;
-  margin: auto;
-  padding: 1vmin;
-  font-size: 3vmin;
-  background: grey;
 }
