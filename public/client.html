@@ -6,12 +6,11 @@
     <link rel="stylesheet" href="client.css">
     <link rel="icon" type="image/x-icon" href="circle.ico">
   </head>
-  <body style="background-color:black;">
+  <body style="background-color:hsl(0, 0%, 0%);">
     <div id="mainDiv">
       <div id="blueDiv"></div> 
-      <div id="mapDiv" >
-        <canvas id="mapCanvas" width="300" height="300"></canvas>
-      </div>
+      <svg id="mapSvg" width="100vmin" height="100vmin" viewBox="-50 -50 100 100" preserveAspectRatio="none"></svg>
+      <!-- <canvas id="mapCanvas" width="300" height="300"></canvas> -->
       <div id="greenDiv"></div>
     </div>
     <script src="client.js" type="module"></script>

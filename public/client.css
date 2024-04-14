@@ -6,11 +6,9 @@ body {
   padding: 0;
   overflow: hidden; 
   align-items: center;
-  cursor: url('cursor.png'), pointer;
 }
-#mapCanvas { 
-  margin-top: 0vmin;
-  border: 1px solid hsl(180, 10%, 10%);
+#mapSvg {
+  background-color: hsl(0, 0%, 87%)ck;
 }
 #mainDiv {
   display: flex;
