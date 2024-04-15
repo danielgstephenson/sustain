@@ -1,16 +1,17 @@
 import { io } from './socketIo/socket.io.esm.min.js'
+import { range } from './math.js'
+
 const svgns = 'http://www.w3.org/2000/svg'
 const mapSvg = document.getElementById('mapSvg')
 
-function range (n) { return [...Array(n).keys()] }
-// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
-// const sum = array => array.reduce((a, b) => a + b, 0)
-
-let msgLog = {}
 let nodes = []
 let hexes = []
 let serverId = 0
 let mapRadius = 1
+let team = 0
+const wait = 0
+let targetHex = {}
+let msgLog = {}
 
 const socket = io()
 socket.on('updateClient', (msg) => {
@@ -19,19 +20,15 @@ socket.on('updateClient', (msg) => {
   if (msg.serverId !== serverId) {
     mapRadius = msg.mapRadius
     serverId = msg.serverId
+    team = msg.team
     setupMap()
   }
   updateHexColors()
 })
 
 window.oncontextmenu = () => false
-window.onmousedown = () => {
-  console.log(serverId)
-  console.log(msgLog)
-  console.log(nodes)
-}
 
-const radius = 0.95
+const radius = 0.90
 let hexPoints = `${radius},0`
 range(6).forEach(i => {
   const angle = 2 * Math.PI * (i + 1) / 6
@@ -39,6 +36,7 @@ range(6).forEach(i => {
   const y = Math.sin(angle) * radius
   hexPoints = hexPoints + ` ${x},${y}`
 })
+const circumference = 6 * 12 * radius * Math.sin(1 / 12)
 
 function setupMap () {
   mapSvg.innerHTML = ''
@@ -49,9 +47,44 @@ function setupMap () {
     const hex = document.createElementNS(svgns, 'polygon')
     hex.setAttributeNS(null, 'points', hexPoints)
     hex.setAttributeNS(null, 'transform', `translate(${node.x},${node.y})`)
+    hex.style.clipPath = hexPoints
     mapSvg.appendChild(hex)
+    hex.id = node.id
+    hex.onmouseover = () => {
+      targetHex = hex
+    }
+    hex.onmouseleave = () => {
+      hex.style.strokeWidth = 0
+      targetHex = {}
+    }
+    hex.onmousedown = () => {
+      socket.emit('activate', { id: hex.id })
+      console.log('msgLog', msgLog)
+    }
     hexes[node.id] = hex
   })
+}
+
+function drawOutline () {
+  hexes.forEach(hex => {
+    hex.style.strokeWidth = 0
+  })
+  if (targetHex.id) {
+    targetHex.style.strokeDasharray = `${(1 - msgLog.wait) * circumference} ${msgLog.wait * circumference} `
+    console.log(wait)
+    if (nodes[targetHex.id].align === 0) {
+      const color = colors[team]
+      targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
+      targetHex.style.strokeWidth = 1 - radius
+      targetHex.style.clipPath = hexPoints
+    }
+    if (nodes[targetHex.id].align === team) {
+      const color = colors[0]
+      targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
+      targetHex.style.strokeWidth = 1 - radius
+      targetHex.style.clipPath = hexPoints
+    }
+  }
 }
 
 const colors = {
@@ -65,8 +98,7 @@ function updateHexColors () {
   hexes.forEach((hex, i) => {
     const node = nodes[i]
     const color = colors[node.align]
-    const fill = `hsla(${color.H}, ${color.S}%, ${color.L}%, ${0.25 + 0.75 * node.life})`
-    hex.setAttributeNS(null, 'style', `fill: ${fill}; stroke: none; stroke-width: 0;`)
+    hex.style.fill = `hsla(${color.H}, ${color.S}%, ${color.L}%, ${0.25 + 0.75 * node.life})`
   })
 }
 
@@ -76,3 +108,4 @@ function updateServer () {
 }
 
 setInterval(updateServer, 100)
+setInterval(drawOutline, 10)

@@ -1,54 +1,16 @@
 import { makeIo } from './server.js'
-
-console.log('Hello server.')
+import { shuffle, range } from './public/math.js'
 
 const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
 const updateInterval = 0.1
 const mapRadius = 5
+const timeStep = 0.2
 
-const io = makeIo(() => {
-  setInterval(update, updateInterval * 1000)
-})
-
-io.on('connection', socket => {
-  console.log('connection:', socket.id)
-  socket.emit('socketId', socket.id)
-  const playerArray = Array.from(players.values())
-  const teamCount1 = playerArray.filter(player => player.team === 1).length
-  const teamCount2 = playerArray.filter(player => player.team === 2).length
-  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
-  const player = {
-    id: socket.id,
-    team: smallTeam
-  }
-  players.set(socket.id, player)
-  sockets.set(socket.id, socket)
-  socket.on('clientUpdateServer', message => {
-    const reply = {
-      team: player.team,
-      serverId,
-      mapRadius,
-      nodes
-    }
-    socket.emit('updateClient', reply)
-  })
-  socket.on('disconnect', () => {
-    console.log('disconnect:', socket.id)
-    sockets.delete(socket.id)
-    players.delete(socket.id)
-  })
-})
-
-function range (n) {
-  return [...Array(n).keys()]
-}
-function choose (array) {
-  return array[Math.floor(Math.random() * array.length)]
-}
-// function sum (array) { return array.reduce((a, b) => a + b, 0) }
-// function clamp (a, b, x) { return Math.max(a, Math.min(b, x)) }
+let time = 0
+let halfCycleLength = 0
+let cycleLength = 0
 
 const Q = {
   x: 1,
@@ -63,15 +25,94 @@ const S = {
   y: -Math.sqrt(3 / 4)
 }
 
-const nodes = makeNodes()
-
-nodes.forEach((node, index) => {
-  node.id = index
+const io = makeIo(() => {
+  setInterval(update, updateInterval * 1000)
 })
 
-function update () {
-  //
+io.on('connection', socket => {
+  console.log('connection:', socket.id)
+  socket.emit('socketId', socket.id)
+  const playerArray = Array.from(players.values())
+  const teamCount1 = playerArray.filter(player => player.team === 1).length
+  const teamCount2 = playerArray.filter(player => player.team === 2).length
+  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
+  const player = {
+    id: socket.id,
+    team: smallTeam,
+    wait: 0
+  }
+  players.set(socket.id, player)
+  sockets.set(socket.id, socket)
+  socket.on('clientUpdateServer', message => {
+    const reply = {
+      team: player.team,
+      wait: player.wait,
+      serverId,
+      mapRadius,
+      nodes
+    }
+    socket.emit('updateClient', reply)
+  })
+  socket.on('activate', message => {
+    activate(player, message.id)
+  })
+  socket.on('disconnect', () => {
+    console.log('disconnect:', socket.id)
+    sockets.delete(socket.id)
+    players.delete(socket.id)
+  })
+})
+
+function activate (player, id) {
+  if (player.wait === 0) {
+    const node = nodes[id]
+    if (node.align === player.team) {
+      node.align = 0
+      player.wait = 1
+    } else if (node.align === 0) {
+      node.align = player.team
+      player.wait = 1
+    }
+  }
 }
+
+const nodes = makeNodes()
+
+function update () {
+  time = (time + 1) % cycleLength
+  nodes.forEach(node => {
+    node.time = (time + node.startTime) % cycleLength
+    node.life = 0.5 * Math.cos(Math.PI * node.time / halfCycleLength) + 0.5
+    if (node.time === 0) change(node)
+  })
+  players.forEach(player => {
+    player.wait = Math.max(0, player.wait - timeStep / 20)
+  })
+}
+
+function change (node) {
+  const neighbors = node.neighbors.map(i => nodes[i])
+  const n0 = neighbors.filter(neighbor => neighbor.align === 0).length
+  const n1 = neighbors.filter(neighbor => neighbor.align === 1).length
+  const n2 = neighbors.filter(neighbor => neighbor.align === 2).length
+  if (node.align === 0) {
+    if (n1 > n2) {
+      node.align = 1
+    } else if (n2 > n1) {
+      node.align = 2
+    } else if (n1 > 0 && n1 === n2) {
+      node.align = 3
+    }
+  } else if (node.align === 3) {
+    node.align = 0
+  } else if ([1, 2].includes(node.align)) {
+    if (n0 === 0) {
+      node.align = 3
+    }
+  }
+}
+
+setInterval(update, 1000 * timeStep)
 
 function makeNodes () {
   const nodes = []
@@ -84,7 +125,7 @@ function makeNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const open = Math.random() < 1 & (q !== 0 | r !== 0)
+      const open = Math.random() < 1
       if (inRange && open) {
         const node = makeNode(q, r, s, nodes.length)
         nodes.push(node)
@@ -118,12 +159,20 @@ function makeNodes () {
       }
     })
   })
+  halfCycleLength = nodes.length
+  cycleLength = 2 * halfCycleLength
+  const startTimes = shuffle(range(cycleLength))
+  nodes.forEach((node, id) => {
+    node.id = id
+    node.time = startTimes[id]
+    node.startTime = startTimes[id]
+  })
   return nodes
 }
 
 function makeNode (q, r, s, index) {
   const node = {
-    align: choose([0, 1, 2, 3]),
+    align: 0,
     q,
     r,
     index,
