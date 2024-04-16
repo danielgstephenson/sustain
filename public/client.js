@@ -72,7 +72,7 @@ function drawOutline () {
   if (targetHex.id) {
     targetHex.style.strokeDasharray = `${(1 - msgLog.wait) * circumference} ${msgLog.wait * circumference} `
     console.log(wait)
-    if (nodes[targetHex.id].align === 0) {
+    if ([0, 3].includes(nodes[targetHex.id].align)) {
       const color = colors[team]
       targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
       targetHex.style.strokeWidth = 1 - radius
@@ -88,7 +88,7 @@ function drawOutline () {
 }
 
 const colors = {
-  0: { H: 120, S: 100, L: 40 },
+  0: { H: 125, S: 100, L: 50 },
   1: { H: 240, S: 100, L: 50 },
   2: { H: 0, S: 100, L: 40 },
   3: { H: 0, S: 0, L: 70 }
@@ -98,7 +98,7 @@ function updateHexColors () {
   hexes.forEach((hex, i) => {
     const node = nodes[i]
     const color = colors[node.align]
-    hex.style.fill = `hsla(${color.H}, ${color.S}%, ${color.L}%, ${0.25 + 0.75 * node.life})`
+    hex.style.fill = `hsla(${color.H}, ${color.S}%, ${color.L}%, ${0.2 + 0.8 * node.life})`
   })
 }
 

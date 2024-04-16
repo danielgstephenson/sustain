@@ -1,16 +1,15 @@
 import { makeIo } from './server.js'
-import { shuffle, range } from './public/math.js'
+import { shuffle, range, choose } from './public/math.js'
 
 const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
-const updateInterval = 0.1
-const mapRadius = 5
-const timeStep = 0.2
+const mapRadius = 7
+const timeStep = 1
+const cycleLength = 6
 
 let time = 0
-let halfCycleLength = 0
-let cycleLength = 0
+let oldNodes = {}
 
 const Q = {
   x: 1,
@@ -26,23 +25,14 @@ const S = {
 }
 
 const io = makeIo(() => {
-  setInterval(update, updateInterval * 1000)
+  setInterval(update, timeStep * 1000)
 })
 
 io.on('connection', socket => {
   console.log('connection:', socket.id)
   socket.emit('socketId', socket.id)
-  const playerArray = Array.from(players.values())
-  const teamCount1 = playerArray.filter(player => player.team === 1).length
-  const teamCount2 = playerArray.filter(player => player.team === 2).length
-  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
-  const player = {
-    id: socket.id,
-    team: smallTeam,
-    wait: 0
-  }
-  players.set(socket.id, player)
   sockets.set(socket.id, socket)
+  const player = makePlayer(socket.id)
   socket.on('clientUpdateServer', message => {
     const reply = {
       team: player.team,
@@ -63,56 +53,81 @@ io.on('connection', socket => {
   })
 })
 
-function activate (player, id) {
-  if (player.wait === 0) {
-    const node = nodes[id]
-    if (node.align === player.team) {
-      node.align = 0
-      player.wait = 1
-    } else if (node.align === 0) {
-      node.align = player.team
-      player.wait = 1
-    }
-  }
-}
-
 const nodes = makeNodes()
 
 function update () {
   time = (time + 1) % cycleLength
   nodes.forEach(node => {
     node.time = (time + node.startTime) % cycleLength
-    node.life = 0.5 * Math.cos(Math.PI * node.time / halfCycleLength) + 0.5
-    if (node.time === 0) change(node)
+    node.life = (node.time + 1) / cycleLength
+  })
+  oldNodes = JSON.parse(JSON.stringify(nodes))
+  nodes.forEach(node => {
+    if ([1, 2].includes(node.align)) feed(node)
+  })
+  nodes.forEach(node => {
+    if (node.time === 0) grow(node)
   })
   players.forEach(player => {
-    player.wait = Math.max(0, player.wait - timeStep / 20)
+    player.time = Math.min(cycleLength, player.time + 1)
+    player.wait = 1 - player.time / cycleLength
   })
 }
 
-function change (node) {
-  const neighbors = node.neighbors.map(i => nodes[i])
-  const n0 = neighbors.filter(neighbor => neighbor.align === 0).length
-  const n1 = neighbors.filter(neighbor => neighbor.align === 1).length
-  const n2 = neighbors.filter(neighbor => neighbor.align === 2).length
-  if (node.align === 0) {
+function feed (node) {
+  const neighbors = node.neighbors.map(i => oldNodes[i])
+  const neighbors0 = neighbors.filter(neighbor => neighbor.align === 0)
+  const n0 = neighbors0.length
+  if (n0 < 2) node.align = 3
+}
+
+function grow (node) {
+  const neighbors = node.neighbors.map(i => oldNodes[i])
+  const neighbors1 = neighbors.filter(neighbor => neighbor.align === 1)
+  const neighbors2 = neighbors.filter(neighbor => neighbor.align === 2)
+  const n1 = neighbors1.length
+  const n2 = neighbors2.length
+  if (node.align === 3) {
+    node.align = 0
+  } else if (node.align === 0) {
     if (n1 > n2) {
       node.align = 1
-    } else if (n2 > n1) {
-      node.align = 2
-    } else if (n1 > 0 && n1 === n2) {
-      node.align = 3
     }
-  } else if (node.align === 3) {
-    node.align = 0
-  } else if ([1, 2].includes(node.align)) {
-    if (n0 === 0) {
-      node.align = 3
+    if (n2 > n1) {
+      node.align = 2
     }
   }
 }
 
-setInterval(update, 1000 * timeStep)
+function activate (player, id) {
+  if (player.wait === 0) {
+    const node = nodes[id]
+    if (node.align === player.team) {
+      node.align = 0
+      player.time = 0
+      player.wait = 1
+    } else if ([0, 3].includes(node.align)) {
+      node.align = player.team
+      player.time = 0
+      player.wait = 1
+    }
+  }
+}
+
+function makePlayer (id) {
+  const playerArray = Array.from(players.values())
+  const teamCount1 = playerArray.filter(player => player.team === 1).length
+  const teamCount2 = playerArray.filter(player => player.team === 2).length
+  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
+  const player = {
+    id,
+    team: smallTeam,
+    time: cycleLength,
+    wait: 0
+  }
+  players.set(id, player)
+  return player
+}
 
 function makeNodes () {
   const nodes = []
@@ -125,7 +140,7 @@ function makeNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const open = Math.random() < 1
+      const open = Math.random() < 0.75 && (q !== 0 | r !== 0)
       if (inRange && open) {
         const node = makeNode(q, r, s, nodes.length)
         nodes.push(node)
@@ -159,13 +174,12 @@ function makeNodes () {
       }
     })
   })
-  halfCycleLength = nodes.length
-  cycleLength = 2 * halfCycleLength
-  const startTimes = shuffle(range(cycleLength))
+  const timeSpread = Math.max(1, Math.floor(cycleLength / nodes.length))
+  const startTimes = shuffle(range(nodes.length)).map(i => (i * timeSpread) % cycleLength)
   nodes.forEach((node, id) => {
     node.id = id
     node.time = startTimes[id]
-    node.startTime = startTimes[id]
+    node.startTime = choose(range(cycleLength))
   })
   return nodes
 }
