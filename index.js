@@ -1,15 +1,16 @@
 import { makeIo } from './server.js'
-import { shuffle, range, choose } from './public/math.js'
+import { choose, clamp, range } from './public/math.js'
 
 const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
-const mapRadius = 7
-const timeStep = 1
-const cycleLength = 6
 
-let time = 0
-let oldNodes = {}
+const mapRadius = 4
+const timeStep = 0.1
+const growSteps = 30
+const buildSteps = 30
+
+let step = 0
 
 const Q = {
   x: 1,
@@ -56,46 +57,20 @@ io.on('connection', socket => {
 const nodes = makeNodes()
 
 function update () {
-  time = (time + 1) % cycleLength
-  nodes.forEach(node => {
-    node.time = (time + node.startTime) % cycleLength
-    node.life = (node.time + 1) / cycleLength
-  })
-  oldNodes = JSON.parse(JSON.stringify(nodes))
-  nodes.forEach(node => {
-    if ([1, 2].includes(node.align)) feed(node)
-  })
-  nodes.forEach(node => {
-    if (node.time === 0) grow(node)
-  })
+  step = step + 1
   players.forEach(player => {
-    player.time = Math.min(cycleLength, player.time + 1)
-    player.wait = 1 - player.time / cycleLength
+    player.step = clamp(0, buildSteps, player.step + 1)
+    player.wait = 1 - player.step / buildSteps
   })
-}
-
-function feed (node) {
-  const neighbors = node.neighbors.map(i => oldNodes[i])
-  const neighbors0 = neighbors.filter(neighbor => neighbor.align === 0)
-  const n0 = neighbors0.length
-  if (n0 < 2) node.align = 3
-}
-
-function grow (node) {
-  const neighbors = node.neighbors.map(i => oldNodes[i])
-  const neighbors1 = neighbors.filter(neighbor => neighbor.align === 1)
-  const neighbors2 = neighbors.filter(neighbor => neighbor.align === 2)
-  const n1 = neighbors1.length
-  const n2 = neighbors2.length
-  if (node.align === 3) {
-    node.align = 0
-  } else if (node.align === 0) {
-    if (n1 > n2) {
-      node.align = 1
-    }
-    if (n2 > n1) {
-      node.align = 2
-    }
+  if (step % growSteps === 0) {
+    nodes.forEach(node => {
+      // node.target = (node.target + 1) % node.neighbors.length
+    })
+    nodes.forEach(node => {
+      if ([1, 2].includes(node.align)) {
+        node.align = 0
+      }
+    })
   }
 }
 
@@ -104,11 +79,11 @@ function activate (player, id) {
     const node = nodes[id]
     if (node.align === player.team) {
       node.align = 0
-      player.time = 0
+      player.step = 0
       player.wait = 1
     } else if ([0, 3].includes(node.align)) {
       node.align = player.team
-      player.time = 0
+      player.step = 0
       player.wait = 1
     }
   }
@@ -122,7 +97,7 @@ function makePlayer (id) {
   const player = {
     id,
     team: smallTeam,
-    time: cycleLength,
+    step: buildSteps,
     wait: 0
   }
   players.set(id, player)
@@ -140,7 +115,7 @@ function makeNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const open = Math.random() < 0.75 && (q !== 0 | r !== 0)
+      const open = Math.random() < 1 && (q !== 0 | r !== 0)
       if (inRange && open) {
         const node = makeNode(q, r, s, nodes.length)
         nodes.push(node)
@@ -152,47 +127,34 @@ function makeNodes () {
     range(length).forEach(j => {
       const node = nodeMap[i][j]
       if (node) {
-        const neighbors = [
-          nodeMap[i][j + 1],
-          nodeMap[i][j - 1]
-        ]
-        if (nodeMap[i + 1]) {
-          neighbors.push(...[
-            nodeMap[i + 1][j],
-            nodeMap[i + 1][j - 1]
-          ])
-        }
-        if (nodeMap[i - 1]) {
-          neighbors.push(...[
-            nodeMap[i - 1][j],
-            nodeMap[i - 1][j + 1]
-          ])
-        }
+        const neighbors = []
+        if (nodeMap[i + 1]) neighbors.push(nodeMap[i + 1][j])
+        neighbors.push(nodeMap[i][j + 1])
+        if (nodeMap[i - 1]) neighbors.push(nodeMap[i - 1][j + 1])
+        if (nodeMap[i - 1]) neighbors.push(nodeMap[i - 1][j])
+        neighbors.push(nodeMap[i][j - 1])
+        if (nodeMap[i + 1]) neighbors.push(nodeMap[i + 1][j - 1])
         neighbors.forEach(neighbor => {
-          if (neighbor) node.neighbors.push(neighbor.index)
+          if (neighbor) node.neighbors.push(neighbor.id)
         })
       }
     })
   })
-  const timeSpread = Math.max(1, Math.floor(cycleLength / nodes.length))
-  const startTimes = shuffle(range(nodes.length)).map(i => (i * timeSpread) % cycleLength)
-  nodes.forEach((node, id) => {
-    node.id = id
-    node.time = startTimes[id]
-    node.startTime = choose(range(cycleLength))
+  nodes.forEach(node => {
+    node.target = choose(range(node.neighbors.length))
   })
   return nodes
 }
 
-function makeNode (q, r, s, index) {
+function makeNode (q, r, s, id) {
   const node = {
     align: 0,
     q,
     r,
-    index,
+    id,
+    density: Math.ceil(6 * Math.random()) / 6,
     x: q * Q.x + r * R.x + s * S.x,
     y: q * Q.y + r * R.y + s * S.y,
-    life: Math.random(),
     neighbors: []
   }
   return node
