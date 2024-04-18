@@ -29,7 +29,7 @@ socket.on('updateClient', (msg) => {
 
 window.oncontextmenu = () => false
 
-const radius = 0.90
+const radius = 0.85
 let hexPoints = `${radius},0`
 range(6).forEach(i => {
   const angle = 2 * Math.PI * (i + 1) / 6
@@ -73,29 +73,32 @@ function drawOutline () {
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference} `
     if ([0, 3].includes(nodes[targetHex.id].align)) {
       const color = colors[team]
-      targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
+      targetHex.style.stroke = `hsla(${color.H1}, ${color.S1}%, ${color.L1}%)`
       targetHex.style.strokeWidth = 1 - radius
     }
     if (nodes[targetHex.id].align === team) {
       const color = colors[0]
-      targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
+      targetHex.style.stroke = `hsla(${color.H1}, ${color.S1}%, ${color.L1}%)`
       targetHex.style.strokeWidth = 1 - radius
     }
   }
 }
 
 const colors = {
-  0: { H: 120, S: 100, L: 30 },
-  1: { H: 240, S: 100, L: 50 },
-  2: { H: 0, S: 100, L: 30 },
-  3: { H: 100, S: 0, L: 30 }
+  0: { H0: 120, H1: 120, S0: 100, S1: 100, L0: 20, L1: 80 },
+  1: { H0: 180, H1: 240, S0: 100, S1: 100, L0: 20, L1: 50 },
+  2: { H0: 60, H1: 0, S0: 100, S1: 100, L0: 20, L1: 45 },
+  3: { H0: 120, H1: 120, S0: 0, S1: 0, L0: 10, L1: 40 }
 }
 
 function updateHexColors () {
   hexes.forEach(hex => {
     const node = nodes[hex.id]
     const color = colors[node.align]
-    hex.style.fill = `hsla(${color.H}, ${color.S * node.saturation}%, ${color.L * node.lightness}%, 1)`
+    const H = node.hue * color.H1 + (1 - node.hue) * color.H0
+    const S = node.hue * color.S1 + (1 - node.hue) * color.S0
+    const L = node.lightness * color.L1 + (1 - node.lightness) * color.L0
+    hex.style.fill = `hsla(${H}, ${S}%, ${L}%, 1)`
   })
 }
 
