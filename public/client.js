@@ -6,7 +6,6 @@ const mapSvg = document.getElementById('mapSvg')
 
 let nodes = []
 let hexes = []
-let arrows = []
 let serverId = 0
 let mapRadius = 1
 let team = 0
@@ -26,7 +25,6 @@ socket.on('updateClient', (msg) => {
     setupMap()
   }
   updateHexColors()
-  updateArrows()
 })
 
 window.oncontextmenu = () => false
@@ -41,22 +39,9 @@ range(6).forEach(i => {
 })
 const circumference = 6 * 12 * radius * Math.sin(1 / 12)
 
-let arrowPoints = ''
-arrowPoints += `${-0.05 * radius},${-0.05 * radius} `
-arrowPoints += `${+0.50 * radius},${-0.05 * radius} `
-arrowPoints += `${+0.50 * radius},${-0.25 * radius} `
-arrowPoints += `${+0.90 * radius},${-0.05 * radius} `
-// arrowPoints += `${+1.90 * radius},${-0.05 * radius} `
-// arrowPoints += `${+1.90 * radius},${+0.05 * radius} `
-arrowPoints += `${+0.90 * radius},${+0.05 * radius} `
-arrowPoints += `${+0.50 * radius},${+0.25 * radius} `
-arrowPoints += `${+0.50 * radius},${+0.05 * radius} `
-arrowPoints += `${-0.05 * radius},${+0.05 * radius} `
-
 function setupMap () {
   mapSvg.innerHTML = ''
   hexes = []
-  arrows = []
   const z = 2 + 2 * Math.sqrt(3 / 4) * mapRadius
   mapSvg.setAttributeNS(null, 'viewBox', `-${z} -${z} ${2 * z} ${2 * z}`)
   nodes.forEach(node => {
@@ -75,22 +60,6 @@ function setupMap () {
     }
     hex.onmousedown = () => {
       socket.emit('activate', { id: hex.id })
-      console.log('msgLog', msgLog)
-    }
-  })
-  nodes.forEach(node => {
-    const arrow = document.createElementNS(svgns, 'polygon')
-    arrow.setAttributeNS(null, 'points', arrowPoints)
-    arrow.setAttributeNS(null, 'transform', `translate(${node.x},${node.y}) rotate(${90})`)
-    arrow.style.fill = 'black'
-    arrow.id = node.id
-    arrows[node.id] = arrow
-    mapSvg.appendChild(arrow)
-    arrow.onmouseover = () => {
-      targetHex = hexes[node.id]
-    }
-    arrow.onmousedown = () => {
-      socket.emit('activate', { id: node.id })
       console.log('msgLog', msgLog)
     }
   })
@@ -116,32 +85,17 @@ function drawOutline () {
 }
 
 const colors = {
-  0: { H: 125, S: 100, L: 30 },
+  0: { H: 120, S: 100, L: 30 },
   1: { H: 240, S: 100, L: 50 },
   2: { H: 0, S: 100, L: 30 },
-  3: { H: 0, S: 0, L: 70 }
+  3: { H: 100, S: 0, L: 30 }
 }
 
 function updateHexColors () {
   hexes.forEach(hex => {
     const node = nodes[hex.id]
     const color = colors[node.align]
-    hex.style.fill = `hsla(${color.H}, ${color.S}%, ${color.L}%, 1)`
-  })
-}
-
-function updateArrows () {
-  arrows.forEach(arrow => {
-    const node = nodes[arrow.id]
-    const x0 = node.x
-    const y0 = node.y
-    const target = nodes[node.neighbors[node.target]]
-    const x1 = target.x
-    const y1 = target.y
-    const dx = x1 - x0
-    const dy = y1 - y0
-    const angle = Math.atan2(dy, dx) / Math.PI * 180
-    arrow.setAttributeNS(null, 'transform', `translate(${node.x},${node.y}) rotate(${angle})`)
+    hex.style.fill = `hsla(${color.H}, ${color.S * node.saturation}%, ${color.L * node.lightness}%, 1)`
   })
 }
 

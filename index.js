@@ -5,28 +5,17 @@ const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
 
-const mapRadius = 4
+const mapRadius = 5
 const timeStep = 0.1
-const growSteps = 30
-const buildSteps = 30
+const growSteps = 50
+const buildSteps = 300
 
 let step = 0
-
-const Q = {
-  x: 1,
-  y: 0
-}
-const R = {
-  x: -0.5,
-  y: Math.sqrt(3 / 4)
-}
-const S = {
-  x: -0.5,
-  y: -Math.sqrt(3 / 4)
-}
+let nodes = []
 
 const io = makeIo(() => {
   setInterval(update, timeStep * 1000)
+  makeNodes()
 })
 
 io.on('connection', socket => {
@@ -54,24 +43,64 @@ io.on('connection', socket => {
   })
 })
 
-const nodes = makeNodes()
-
 function update () {
   step = step + 1
   players.forEach(player => {
     player.step = clamp(0, buildSteps, player.step + 1)
     player.wait = 1 - player.step / buildSteps
   })
-  if (step % growSteps === 0) {
-    nodes.forEach(node => {
-      // node.target = (node.target + 1) % node.neighbors.length
-    })
-    nodes.forEach(node => {
-      if ([1, 2].includes(node.align)) {
+  nodes.forEach(node => {
+    node.step = (node.step + 1) % growSteps
+    node.invasion[1] = 0
+    node.invasion[2] = 0
+  })
+  nodes.forEach(node => {
+    if (node.align === 3 && node.step === 0) {
+      const neighbors = node.neighbors.map(i => nodes[i])
+      const neighbors1 = neighbors.filter(neighbor => neighbor.align === 1)
+      const neighbors2 = neighbors.filter(neighbor => neighbor.align === 2)
+      if (neighbors1.length + neighbors2.length === 0) {
         node.align = 0
       }
-    })
-  }
+    }
+  })
+  nodes.forEach(node => {
+    if ([1, 2].includes(node.align) && node.step === 0) {
+      const neighbors = node.neighbors.map(i => nodes[i])
+      const neighbors0 = neighbors.filter(neighbor => neighbor.align === 0)
+      if (node.generation === 0) {
+        const minStep = Math.min(...neighbors0.map(neighbor => neighbor.step))
+        const targets = neighbors0.filter(neighbor => neighbor.step === minStep)
+        targets.forEach(target => {
+          target.invasion[node.align] += 1
+        })
+      }
+      if (neighbors0.length === 0) {
+        node.align = 3
+      }
+    }
+  })
+  nodes.forEach(node => {
+    if (node.align === 0) {
+      if (node.invasion[1] > node.invasion[2]) {
+        node.align = 1
+        node.generation = 0
+      }
+      if (node.invasion[2] > node.invasion[1]) {
+        node.align = 2
+        node.generation = 0
+      }
+    }
+  })
+  nodes.forEach(node => {
+    const stepRatio = node.step / (growSteps - 1)
+    if (node.align === 0) {
+      node.lightness = 0.2 + 0.8 * (1 - stepRatio)
+    } else {
+      node.lightness = 0.2 + 0.8 * stepRatio
+    }
+    node.saturation = node.generation === 0 ? 1 : 0.5
+  })
 }
 
 function activate (player, id) {
@@ -79,10 +108,12 @@ function activate (player, id) {
     const node = nodes[id]
     if (node.align === player.team) {
       node.align = 0
+      node.step = 0
       player.step = 0
       player.wait = 1
     } else if ([0, 3].includes(node.align)) {
       node.align = player.team
+      node.step = 0
       player.step = 0
       player.wait = 1
     }
@@ -105,7 +136,7 @@ function makePlayer (id) {
 }
 
 function makeNodes () {
-  const nodes = []
+  nodes = []
   const nodeMap = []
   const length = 1 + 2 * mapRadius
   range(length).forEach(i => {
@@ -115,7 +146,7 @@ function makeNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const open = Math.random() < 1 && (q !== 0 | r !== 0)
+      const open = Math.random() < 0.75 && (q !== 0 | r !== 0)
       if (inRange && open) {
         const node = makeNode(q, r, s, nodes.length)
         nodes.push(node)
@@ -152,10 +183,30 @@ function makeNode (q, r, s, id) {
     q,
     r,
     id,
-    density: Math.ceil(6 * Math.random()) / 6,
     x: q * Q.x + r * R.x + s * S.x,
     y: q * Q.y + r * R.y + s * S.y,
     neighbors: []
   }
+  node.step = choose(range(growSteps))
+  node.lightness = node.step / (growSteps - 1)
+  node.generation = 0
+  node.saturation = 1
+  node.invasion = {
+    1: 0,
+    2: 0
+  }
   return node
+}
+
+const Q = {
+  x: 1,
+  y: 0
+}
+const R = {
+  x: -0.5,
+  y: Math.sqrt(3 / 4)
+}
+const S = {
+  x: -0.5,
+  y: -Math.sqrt(3 / 4)
 }
