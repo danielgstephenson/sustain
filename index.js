@@ -78,7 +78,7 @@ function update () {
     team.nodeCount = nodes.filter(node => node.align === team.id).length
   })
   Object.values(teams).forEach(team => {
-    const otherTeam = team.id === 1 ? teams[2] : team[1]
+    const otherTeam = team.id === 1 ? teams[2] : teams[1]
     if (team.nodeCount > otherTeam.nodeCount) {
       team.score += 1
       otherTeam.score -= 1
