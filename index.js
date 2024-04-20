@@ -4,14 +4,33 @@ import { choose, clamp, range } from './public/math.js'
 const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
+const AI = true
 
-const mapRadius = 8
+const mapRadius = 7
 const timeStep = 0.1
 const growSteps = 25
 const buildSteps = 100
 const lighnessLevelCount = 4
 
-let step = 0
+const teams = {
+  1: {
+    id: 1,
+    step: buildSteps,
+    wait: 0,
+    nodeCount: 0,
+    score: 0,
+    playerCount: 0
+  },
+  2: {
+    id: 2,
+    step: buildSteps,
+    wait: 0,
+    nodeCount: 0,
+    score: 0,
+    playerCount: 0
+  }
+}
+
 let nodes = []
 
 const io = makeIo(() => {
@@ -24,31 +43,47 @@ io.on('connection', socket => {
   socket.emit('socketId', socket.id)
   sockets.set(socket.id, socket)
   const player = makePlayer(socket.id)
+  const team = teams[player.teamId]
   socket.on('clientUpdateServer', message => {
     const reply = {
-      team: player.team,
-      wait: player.wait,
+      team: player.teamId,
+      wait: team.wait,
       serverId,
       mapRadius,
-      nodes
+      nodes,
+      teams
     }
     socket.emit('updateClient', reply)
   })
   socket.on('activate', message => {
-    activate(player, message.id)
+    activate(player.teamId, message.id)
   })
   socket.on('disconnect', () => {
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
+    team.playerCount -= 1
   })
 })
 
 function update () {
-  step = step + 1
-  players.forEach(player => {
-    player.step = clamp(0, buildSteps, player.step + 1)
-    player.wait = 1 - player.step / buildSteps
+  if (AI && teams[2].wait === 0) {
+    const nodes0 = nodes.filter(node => node.align === 0)
+    const node = choose(nodes0)
+    activate(2, node.id)
+  }
+  Object.values(teams).forEach(team => {
+    team.step = clamp(0, buildSteps, team.step + 1)
+    team.wait = 1 - team.step / buildSteps
+    team.nodeCount = nodes.filter(node => node.align === team.id).length
+  })
+  Object.values(teams).forEach(team => {
+    const otherTeam = team.id === 1 ? teams[2] : team[1]
+    if (team.nodeCount > otherTeam.nodeCount) {
+      team.score += 1
+      otherTeam.score -= 1
+      otherTeam.score = Math.max(0, otherTeam.score)
+    }
   })
   nodes.forEach(node => {
     node.invasion[1] = 0
@@ -115,37 +150,36 @@ function update () {
   })
 }
 
-function activate (player, id) {
-  if (player.wait === 0) {
-    const node = nodes[id]
-    if (node.align === player.team) {
+function activate (teamId, nodeId) {
+  const team = teams[teamId]
+  if (team.wait === 0) {
+    const node = nodes[nodeId]
+    if (node.align === teamId) {
       node.align = 0
       node.step = 0
       node.age = 0
-      player.step = 0
-      player.wait = 1
+      team.step = 0
+      team.wait = 1
     } else if ([0, 3].includes(node.align)) {
-      node.align = player.team
+      node.align = teamId
       node.step = 0
       node.age = 0
-      player.step = 0
-      player.wait = 1
+      team.step = 0
+      team.wait = 1
     }
   }
 }
 
-function makePlayer (id) {
-  const playerArray = Array.from(players.values())
-  const teamCount1 = playerArray.filter(player => player.team === 1).length
-  const teamCount2 = playerArray.filter(player => player.team === 2).length
-  const smallTeam = teamCount1 > teamCount2 ? 2 : 1
+function makePlayer (socketId) {
+  const smallTeamId = teams[1].playerCount > teams[2].playerCount ? 2 : 1
   const player = {
-    id,
-    team: smallTeam,
+    id: socketId,
+    teamId: smallTeamId,
     step: buildSteps,
     wait: 0
   }
-  players.set(id, player)
+  players.set(socketId, player)
+  teams[player.teamId].playerCount += 1
   return player
 }
 

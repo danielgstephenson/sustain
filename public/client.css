@@ -9,22 +9,42 @@ body {
 }
 #mapSvg {
   background-color: hsl(0, 0%, 87%)ck;
+  min-width: 100vmin;
+  min-height: 100vmin;
 }
 #mainDiv {
   display: flex;
   justify-content: center;
 }
-#blueDiv {
+#teamDiv1 {
   width: 100%;
-  color: hsl(220, 100%, 50%);
-  margin-top: 20vh;
-  font-size: 10vw;
-  display: none;
+  color: hsl(240, 100%, 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
 }
-#greenDiv {
+#teamDiv2 {
   width: 100%;
-  color: hsl(140, 100%, 30%);
-  margin-top: 20vh;
-  font-size: 10vw;
-  display: none;
+  color: hsl(0, 100%, 30%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+}
+#countDiv1 {
+  color: hsl(240, 100%, 50%);
+  margin-top: 10vmin;
+  font-size: 10vmin;
+  text-align: center;
+  font-family: sans-serif;
+  display: flex;
+}
+#countDiv2 {
+  color: hsl(0, 100%, 30%);
+  margin-top: 10vmin;
+  font-size: 10vmin;
+  text-align: center;
+  font-family: sans-serif;
+  display: flex;
 }

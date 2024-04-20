@@ -1,11 +1,18 @@
 import { io } from './socketIo/socket.io.esm.min.js'
 import { range } from './math.js'
 
+const countDiv1 = document.getElementById('countDiv1')
+const countDiv2 = document.getElementById('countDiv2')
 const svgns = 'http://www.w3.org/2000/svg'
 const mapSvg = document.getElementById('mapSvg')
+const scoreSvg1 = document.getElementById('scoreSvg1')
+const scoreSvg2 = document.getElementById('scoreSvg2')
+
+console.log(scoreSvg1)
 
 let nodes = []
 let hexes = []
+let teams = {}
 let serverId = 0
 let mapRadius = 1
 let team = 0
@@ -13,23 +20,27 @@ let wait = 0
 let targetHex = {}
 let msgLog = {}
 
+window.oncontextmenu = () => false
+window.onmousedown = () => { console.log(msgLog) }
+
 const socket = io()
 socket.on('updateClient', (msg) => {
   msgLog = msg
   nodes = msg.nodes
   team = msg.team
   wait = msg.wait
+  teams = msg.teams
   if (msg.serverId !== serverId) {
     mapRadius = msg.mapRadius
     serverId = msg.serverId
     setupMap()
   }
+  countDiv1.innerHTML = teams[1].nodeCount
+  countDiv2.innerHTML = teams[2].nodeCount
   updateHexColors()
 })
 
-window.oncontextmenu = () => false
-
-const radius = 0.85
+const radius = 0.9
 let hexPoints = `${radius},0`
 range(6).forEach(i => {
   const angle = 2 * Math.PI * (i + 1) / 6
@@ -60,7 +71,6 @@ function setupMap () {
     }
     hex.onmousedown = () => {
       socket.emit('activate', { id: hex.id })
-      console.log('msgLog', msgLog)
     }
   })
 }
@@ -70,16 +80,17 @@ function drawOutline () {
     hex.style.strokeWidth = 0
   })
   if (targetHex.id) {
+    const strokeWidth = 0.3
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference} `
     if ([0, 3].includes(nodes[targetHex.id].align)) {
       const color = colors[team]
       targetHex.style.stroke = `hsla(${color.H1}, ${color.S1}%, ${color.L1}%)`
-      targetHex.style.strokeWidth = 1 - radius
+      targetHex.style.strokeWidth = strokeWidth
     }
     if (nodes[targetHex.id].align === team) {
       const color = colors[0]
       targetHex.style.stroke = `hsla(${color.H1}, ${color.S1}%, ${color.L1}%)`
-      targetHex.style.strokeWidth = 1 - radius
+      targetHex.style.strokeWidth = strokeWidth
     }
   }
 }
@@ -88,7 +99,7 @@ const colors = {
   0: { H0: 120, H1: 120, S0: 100, S1: 100, L0: 20, L1: 80 },
   1: { H0: 180, H1: 240, S0: 100, S1: 100, L0: 20, L1: 50 },
   2: { H0: 60, H1: 0, S0: 100, S1: 100, L0: 20, L1: 45 },
-  3: { H0: 120, H1: 120, S0: 0, S1: 0, L0: 10, L1: 40 }
+  3: { H0: 120, H1: 120, S0: 0, S1: 30, L0: 10, L1: 40 }
 }
 
 function updateHexColors () {
