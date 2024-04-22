@@ -7,7 +7,7 @@ const sockets = new Map()
 const AI = true
 
 const mapRadius = 7
-const timeStep = 0.1
+const dt = 0.1
 const growSteps = 25
 const buildSteps = 100
 const lighnessLevelCount = 4
@@ -34,7 +34,7 @@ const teams = {
 let nodes = []
 
 const io = makeIo(() => {
-  setInterval(update, timeStep * 1000)
+  setInterval(update, dt * 1000)
   makeNodes()
 })
 
@@ -67,6 +67,7 @@ io.on('connection', socket => {
 })
 
 function update () {
+  if (Math.max(teams[1].score, teams[2].score) >= 1) return
   if (AI && teams[2].wait === 0) {
     const nodes0 = nodes.filter(node => node.align === 0)
     const node = choose(nodes0)
@@ -80,9 +81,9 @@ function update () {
   Object.values(teams).forEach(team => {
     const otherTeam = team.id === 1 ? teams[2] : teams[1]
     if (team.nodeCount > otherTeam.nodeCount) {
-      team.score += 1
-      otherTeam.score -= 1
-      otherTeam.score = Math.max(0, otherTeam.score)
+      const dScore = 1 / 100
+      team.score = clamp(0, 1, team.score + dScore * dt)
+      otherTeam.score = clamp(0, 1, otherTeam.score - dScore * dt)
     }
   })
   nodes.forEach(node => {

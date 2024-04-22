@@ -18,7 +18,6 @@ body {
 }
 #teamDiv1 {
   width: 100%;
-  color: hsl(240, 100%, 50%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,7 +25,6 @@ body {
 }
 #teamDiv2 {
   width: 100%;
-  color: hsl(0, 100%, 30%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,15 +32,13 @@ body {
 }
 #countDiv1 {
   color: hsl(240, 100%, 50%);
-  margin-top: 10vmin;
   font-size: 10vmin;
   text-align: center;
   font-family: sans-serif;
   display: flex;
 }
 #countDiv2 {
-  color: hsl(0, 100%, 30%);
-  margin-top: 10vmin;
+  color: hsl(0, 100%, 40%);
   font-size: 10vmin;
   text-align: center;
   font-family: sans-serif;
