@@ -1,41 +1,28 @@
 import { makeIo } from './server.js'
 import { choose, clamp, range } from './public/math.js'
 
-const serverId = Math.random()
 const players = new Map()
 const sockets = new Map()
 const AI = true
 
-const mapRadius = 7
-const dt = 0.1
-const growSteps = 25
-const buildSteps = 100
-const lighnessLevelCount = 4
+const mapRadius = 10
+const dt = 1 / 60
+const winRate = 0.0003
+const restartTime = 5
+const cycleLength = 100
+const lifeLength = 100
+const deathLength = 100
+const waitLength = 400
 
-const teams = {
-  1: {
-    id: 1,
-    step: buildSteps,
-    wait: 0,
-    nodeCount: 0,
-    score: 0,
-    playerCount: 0
-  },
-  2: {
-    id: 2,
-    step: buildSteps,
-    wait: 0,
-    nodeCount: 0,
-    score: 0,
-    playerCount: 0
-  }
-}
+let aging = true
 
+let gameId = Math.random()
 let nodes = []
+let teams = {}
 
 const io = makeIo(() => {
   setInterval(update, dt * 1000)
-  makeNodes()
+  restart()
 })
 
 io.on('connection', socket => {
@@ -43,12 +30,12 @@ io.on('connection', socket => {
   socket.emit('socketId', socket.id)
   sockets.set(socket.id, socket)
   const player = makePlayer(socket.id)
-  const team = teams[player.teamId]
   socket.on('clientUpdateServer', message => {
+    const team = teams[player.teamId]
     const reply = {
       team: player.teamId,
       wait: team.wait,
-      serverId,
+      gameId,
       mapRadius,
       nodes,
       teams
@@ -59,6 +46,7 @@ io.on('connection', socket => {
     activate(player.teamId, message.id)
   })
   socket.on('disconnect', () => {
+    const team = teams[player.teamId]
     console.log('disconnect:', socket.id)
     sockets.delete(socket.id)
     players.delete(socket.id)
@@ -67,6 +55,15 @@ io.on('connection', socket => {
 })
 
 function update () {
+  Object.values(teams).forEach(team => {
+    if (team.score === 1) {
+      team.victoryTime += dt
+      team.victoryRatio = team.victoryTime / restartTime
+    }
+    if (team.victoryTime > restartTime) {
+      restart()
+    }
+  })
   if (Math.max(teams[1].score, teams[2].score) >= 1) return
   if (AI && teams[2].wait === 0) {
     const nodes0 = nodes.filter(node => node.align === 0)
@@ -74,80 +71,64 @@ function update () {
     activate(2, node.id)
   }
   Object.values(teams).forEach(team => {
-    team.step = clamp(0, buildSteps, team.step + 1)
-    team.wait = 1 - team.step / buildSteps
+    team.step = clamp(0, waitLength, team.step + 1)
+    team.wait = 1 - team.step / waitLength
     team.nodeCount = nodes.filter(node => node.align === team.id).length
   })
   Object.values(teams).forEach(team => {
     const otherTeam = team.id === 1 ? teams[2] : teams[1]
     if (team.nodeCount > otherTeam.nodeCount) {
-      const dScore = 1 / 100
-      team.score = clamp(0, 1, team.score + dScore * dt)
-      otherTeam.score = clamp(0, 1, otherTeam.score - dScore * dt)
+      team.score = clamp(0, 1, team.score + winRate)
+      otherTeam.score = clamp(0, 1, otherTeam.score - winRate)
     }
   })
-  nodes.forEach(node => {
-    node.invasion[1] = 0
-    node.invasion[2] = 0
-  })
-  nodes.forEach(node => {
-    if (node.align === 0) {
-      node.step = 0
-    } else if ([1, 2].includes(node.align)) {
-      node.step = Math.min(growSteps, node.step + 1)
-    } else if (node.align === 3) {
-      const neighbors = node.neighbors.map(i => nodes[i])
-      const n1 = neighbors.filter(neighbor => neighbor.align === 1).length
-      const n2 = neighbors.filter(neighbor => neighbor.align === 2).length
-      if (n1 + n2 === 0) node.step = Math.min(growSteps, node.step + 1)
-    }
-  })
-  nodes.forEach(node => {
-    if (node.align === 3 && node.step === growSteps) {
-      node.align = 0
-      node.step = 0
-      node.age = 0
-    }
-  })
-  nodes.forEach(node => {
-    if ([1, 2].includes(node.align) && node.step === growSteps && node.age === 0) {
-      node.age = 1
-      const neighbors = node.neighbors.map(i => nodes[i])
-      const neighbors0 = neighbors.filter(neighbor => neighbor.align === 0)
-      const maxLightness = Math.max(...neighbors0.map(neighbor => neighbor.lightness))
-      const targets = neighbors0.filter(neighbor => neighbor.lightness === maxLightness)
-      targets.forEach(target => {
-        target.invasion[node.align] += 1
-      })
-    }
-  })
-  nodes.forEach(node => {
-    if ([1, 2].includes(node.align)) {
-      const neighbors = node.neighbors.map(i => nodes[i])
-      const neighbors0 = neighbors.filter(neighbor => neighbor.align === 0)
-      if (neighbors0.length === 0) {
+  aging = !aging
+  if (aging) {
+    nodes.forEach(node => {
+      if (node.align === 0) {
+        node.step = (node.step + 1) % (cycleLength + 1)
+      } else {
+        node.step += 1
+      }
+    })
+  } else {
+    nodes.forEach(node => {
+      node.invasion = { 1: 0, 2: 0 }
+    })
+    nodes.forEach(node => {
+      if (node.align === 0) {
+        const neighbors = node.neighbors.map(i => nodes[i])
+        node.invasion[1] = neighbors.filter(neighbor => neighbor.align === 1).length
+        node.invasion[2] = neighbors.filter(neighbor => neighbor.align === 2).length
+      }
+    })
+    nodes.forEach(node => {
+      if (node.align === 0 && node.step === 0) {
+        if (node.invasion[1] > node.invasion[2]) {
+          node.align = 1
+          node.step = 0
+        }
+        if (node.invasion[2] > node.invasion[1]) {
+          node.align = 2
+          node.step = 0
+        }
+        if (node.invasion[1] === node.invasion[2] && node.invasion[1] > 0) {
+          node.align = 3
+          node.step = 0
+        }
+      }
+      if ([1, 2].includes(node.align) && node.step > lifeLength) {
         node.align = 3
         node.step = 0
-        node.age = 0
       }
-    }
-  })
+      if (node.align === 3 && node.step > deathLength) {
+        node.align = 0
+        node.step = Math.ceil(0.6 * cycleLength)
+      }
+    })
+  }
   nodes.forEach(node => {
-    if (node.align === 0) {
-      if (node.invasion[1] > node.invasion[2]) {
-        node.align = 1
-        node.step = 0
-        node.age = 0
-      }
-      if (node.invasion[2] > node.invasion[1]) {
-        node.align = 2
-        node.step = 0
-        node.age = 0
-      }
-    }
-  })
-  nodes.forEach(node => {
-    node.hue = node.step / (growSteps - 1)
+    node.color = getColor(node.align, node.step)
   })
 }
 
@@ -155,16 +136,9 @@ function activate (teamId, nodeId) {
   const team = teams[teamId]
   if (team.wait === 0) {
     const node = nodes[nodeId]
-    if (node.align === teamId) {
-      node.align = 0
-      node.step = 0
-      node.age = 0
-      team.step = 0
-      team.wait = 1
-    } else if ([0, 3].includes(node.align)) {
+    if (node.align === 0) {
       node.align = teamId
       node.step = 0
-      node.age = 0
       team.step = 0
       team.wait = 1
     }
@@ -176,7 +150,7 @@ function makePlayer (socketId) {
   const player = {
     id: socketId,
     teamId: smallTeamId,
-    step: buildSteps,
+    step: waitLength,
     wait: 0
   }
   players.set(socketId, player)
@@ -184,7 +158,38 @@ function makePlayer (socketId) {
   return player
 }
 
-function makeNodes () {
+function restart () {
+  gameId = Math.random()
+  createTeams()
+  createNodes()
+}
+
+function createTeams () {
+  teams = {
+    1: {
+      id: 1,
+      step: waitLength,
+      wait: 0,
+      nodeCount: 0,
+      score: 0,
+      playerCount: 0,
+      victoryTime: 0,
+      victoryRatio: 0
+    },
+    2: {
+      id: 2,
+      step: waitLength,
+      wait: 0,
+      nodeCount: 0,
+      score: 0,
+      playerCount: 0,
+      victoryTime: 0,
+      victoryRatio: 0
+    }
+  }
+}
+
+function createNodes () {
   nodes = []
   const nodeMap = []
   const length = 1 + 2 * mapRadius
@@ -195,9 +200,10 @@ function makeNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const open = Math.random() < 0.8 && (q !== 0 | r !== 0)
+      const openProb = 0.5 + 0.3 * Math.random()
+      const open = Math.random() < openProb && (q !== 0 | r !== 0)
       if (inRange && open) {
-        const node = makeNode(q, r, s, nodes.length)
+        const node = createNode(q, r, s, nodes.length)
         nodes.push(node)
         nodeMap[i][j] = node
       }
@@ -223,7 +229,7 @@ function makeNodes () {
   return nodes
 }
 
-function makeNode (q, r, s, id) {
+function createNode (q, r, s, id) {
   const node = {
     align: 0,
     q,
@@ -233,17 +239,46 @@ function makeNode (q, r, s, id) {
     y: q * Q.y + r * R.y + s * S.y,
     neighbors: []
   }
-  node.step = choose(range(growSteps))
-  node.step = 0
-  const lighnessLevel = choose(range(lighnessLevelCount))
-  node.lightness = lighnessLevel / (lighnessLevelCount - 1)
-  node.hue = 0
-  node.age = 0
+  node.step = choose(range(cycleLength))
+  node.color = getColor(node.align, node.step)
   node.invasion = {
     1: 0,
     2: 0
   }
   return node
+}
+
+function getColor (align, step) {
+  if (align === 0) {
+    const turn = (step / cycleLength + 5 / 8) % 1
+    const angle = turn * 2 * Math.PI
+    const radius = 22
+    const center = 22
+    const H = 80
+    const W = center + radius * Math.cos(angle)
+    const B = center + radius * Math.sin(angle)
+    return `hwb(${H} ${W}% ${B}%)`
+  } else if (align === 1) {
+    const H = 220
+    const W = 0
+    const B = 60 * step / lifeLength
+    return `hwb(${H} ${W}% ${B}%)`
+  } else if (align === 2) {
+    const H = 0
+    const W = 0
+    const B = 60 * step / lifeLength
+    return `hwb(${H} ${W}% ${B}%)`
+  } else if (align === 3) {
+    const w0 = 5
+    const w1 = 30
+    const alpha = step / deathLength
+    const H = 40
+    const W = (w1 * alpha + w0 * (1 - alpha))
+    const B = 90 - W
+    return `hwb(${H} ${W}% ${B}%)`
+  } else {
+    throw new Error(`align=${align} out of range in getColor`)
+  }
 }
 
 const Q = {
