@@ -6,13 +6,13 @@ const sockets = new Map()
 const AI = true
 
 const mapRadius = 10
-const dt = 1 / 60
-const winRate = 0.0003
+const dt = 0.02
+const winRate = 0.0002
 const restartTime = 5
-const cycleLength = 100
-const lifeLength = 100
-const deathLength = 100
-const waitLength = 400
+const cycleLength = 150
+const lifeLength = 150
+const deathLength = 150
+const waitLength = 500
 
 let aging = true
 
