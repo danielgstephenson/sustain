@@ -4,9 +4,6 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs-extra'
 
-// Smooth time
-// descrete critical point (brown to green)
-
 const players = new Map()
 const sockets = new Map()
 let ai = false
@@ -23,11 +20,11 @@ if (fileExists) {
 const mapRadius = 10
 const restartTime = 5
 const dt = 0.02
-const winRate = 0.001
-const cycleLength = 50
-const lifeLength = 40
-const deathLength = 60
-const waitLength = 300
+const winRate = 0.0003
+const cycleLength = 100
+const lifeLength = 100
+const deathLength = 100
+const waitLength = 500
 
 let aging = true
 
@@ -215,7 +212,7 @@ function createNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const openProb = 0.5 + 0.3 * Math.random()
+      const openProb = 0.8
       const open = Math.random() < openProb && (q !== 0 | r !== 0)
       if (inRange && open) {
         const node = createNode(q, r, s, nodes.length)
@@ -265,14 +262,10 @@ function createNode (q, r, s, id) {
 
 function getColor (align, step) {
   if (align === 0) {
-    const turn = (step / cycleLength + 5 / 8) % 1
-    const angle = turn * 2 * Math.PI
-    const radius = 22
-    const center = 22
-    const H = 80
-    const W = center + radius * Math.cos(angle)
-    const B = center + radius * Math.sin(angle)
-    return `hwb(${H} ${W}% ${B}%)`
+    const ratio = step / cycleLength
+    const H = 100
+    const V = 10 + 40 * ratio
+    return `hsl(${H} 100% ${V}%)`
   } else if (align === 1) {
     const H = 220
     const W = 0
