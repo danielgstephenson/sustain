@@ -4,6 +4,9 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs-extra'
 
+// Smooth time
+// descrete critical point (brown to green)
+
 const players = new Map()
 const sockets = new Map()
 let ai = false
@@ -18,13 +21,13 @@ if (fileExists) {
 }
 
 const mapRadius = 10
-const dt = 0.5
-const winRate = 0.01
 const restartTime = 5
-const cycleLength = 5
-const lifeLength = 4
-const deathLength = 6
-const waitLength = 30
+const dt = 0.02
+const winRate = 0.001
+const cycleLength = 50
+const lifeLength = 40
+const deathLength = 60
+const waitLength = 300
 
 let aging = true
 
