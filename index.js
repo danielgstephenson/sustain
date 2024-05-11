@@ -18,13 +18,13 @@ if (fileExists) {
 }
 
 const mapRadius = 10
-const dt = 0.02
-const winRate = 0.0002
+const dt = 0.5
+const winRate = 0.01
 const restartTime = 5
-const cycleLength = 150
-const lifeLength = 100
-const deathLength = 200
-const waitLength = 500
+const cycleLength = 5
+const lifeLength = 4
+const deathLength = 6
+const waitLength = 30
 
 let aging = true
 
