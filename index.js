@@ -11,7 +11,7 @@ const winRate = 0.0002
 const restartTime = 5
 const cycleLength = 150
 const lifeLength = 150
-const deathLength = 150
+const deathLength = 200
 const waitLength = 500
 
 let aging = true
