@@ -251,7 +251,7 @@ function createNode (q, r, s, id) {
     y: q * Q.y + r * R.y + s * S.y,
     neighbors: []
   }
-  node.step = 0 // choose(range(cycleLength))
+  node.step = choose(range(cycleLength))
   node.color = getColor(node.align, node.step)
   node.invasion = {
     1: 0,
