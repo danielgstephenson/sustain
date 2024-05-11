@@ -1,9 +1,21 @@
 import { makeIo } from './server.js'
 import { choose, clamp, range } from './public/math.js'
+import { fileURLToPath } from 'url'
+import path from 'path'
+import fs from 'fs-extra'
 
 const players = new Map()
 const sockets = new Map()
-const AI = true
+let ai = false
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const configPath = path.join(__dirname, 'config.json')
+const fileExists = fs.existsSync(configPath)
+const config = fileExists ? fs.readJSONSync(configPath) : {}
+if (fileExists) {
+  if (config.ai) ai = config.ai
+}
 
 const mapRadius = 10
 const dt = 0.02
@@ -65,7 +77,7 @@ function update () {
     }
   })
   if (Math.max(teams[1].score, teams[2].score) >= 1) return
-  if (AI && teams[2].wait === 0) {
+  if (ai && teams[2].wait === 0) {
     const nodes0 = nodes.filter(node => node.align === 0)
     const node = choose(nodes0)
     activate(2, node.id)

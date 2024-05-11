@@ -12,8 +12,8 @@ const configPath = path.join(__dirname, 'config.json')
 const fileExists = fs.existsSync(configPath)
 const config = fileExists ? fs.readJSONSync(configPath) : {}
 if (!fileExists) {
-  config.port = process.env.PORT ?? 3000
-  config.secure = false
+  if (config.port) config.port = process.env.PORT ?? 3000
+  if (config.secure) config.secure = false
 }
 console.log(config)
 
