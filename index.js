@@ -24,7 +24,7 @@ const winRate = 0.0003
 const cycleLength = 100
 const lifeLength = 100
 const deathLength = 100
-const waitLength = 500
+const waitLength = 300
 
 let aging = true
 
@@ -212,7 +212,7 @@ function createNodes () {
       const r = j - mapRadius
       const s = 0 - q - r
       const inRange = -mapRadius <= s && s <= mapRadius
-      const openProb = 0.8
+      const openProb = 0.6
       const open = Math.random() < openProb && (q !== 0 | r !== 0)
       if (inRange && open) {
         const node = createNode(q, r, s, nodes.length)
