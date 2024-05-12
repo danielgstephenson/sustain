@@ -42,9 +42,9 @@ io.on('connection', socket => {
   const player = makePlayer(socket.id)
   socket.on('clientUpdateServer', message => {
     const team = teams[player.teamId]
-    team.targetId = message.targetId
     const reply = {
-      team: player.teamId,
+      teamId: player.teamId,
+      targetId: team.targetId,
       wait: team.wait,
       gameId,
       mapRadius,
@@ -54,8 +54,7 @@ io.on('connection', socket => {
     socket.emit('updateClient', reply)
   })
   socket.on('target', message => {
-    teams[player.teamId].targetId = message.id
-    // activate(player.teamId, message.id)
+    teams[player.teamId].targetId = message.targetId
   })
   socket.on('disconnect', () => {
     const team = teams[player.teamId]
@@ -149,7 +148,7 @@ function activate (teamId, nodeId) {
   const team = teams[teamId]
   if (team.wait === 0) {
     const node = nodes[nodeId]
-    if (node.align === 0) {
+    if (node && node.align === 0) {
       node.align = teamId
       node.step = 0
       team.step = 0

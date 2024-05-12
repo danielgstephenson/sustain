@@ -15,8 +15,9 @@ let hexes = []
 let teams = {}
 let gameId = 0
 let mapRadius = 1
-let team = 0
+let teamId = 0
 let wait = 0
+let targetId = -1
 let targetHex = {}
 let msgLog = {}
 let gameOver = false
@@ -31,7 +32,8 @@ const socket = io()
 socket.on('updateClient', (msg) => {
   msgLog = msg
   nodes = msg.nodes
-  team = msg.team
+  teamId = msg.teamId
+  targetId = msg.targetId
   wait = msg.wait
   teams = msg.teams
   if (msg.gameId !== gameId) {
@@ -39,6 +41,7 @@ socket.on('updateClient', (msg) => {
     gameId = msg.gameId
     setupMap()
   }
+  if (teams[teamId] && hexes[targetId]) targetHex = hexes[targetId]
   countDiv1.innerHTML = teams[1].nodeCount
   countDiv2.innerHTML = teams[2].nodeCount
   circle1.style.strokeDasharray = `${teams[1].score} ${1 - teams[1].score}`
@@ -78,7 +81,8 @@ function setupMap () {
       // targetHex = {}
     }
     hex.onmousedown = () => {
-      targetHex = hex
+      const msg = { targetId: hex.id }
+      socket.emit('target', msg)
     }
   })
 }
@@ -90,7 +94,7 @@ function drawOutline () {
   if (targetHex.id && !gameOver) {
     const strokeWidth = 0.3
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference}`
-    const color = outlineColors[team]
+    const color = outlineColors[teamId]
     targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
     targetHex.style.strokeWidth = strokeWidth
   }
@@ -110,7 +114,7 @@ function updateHexColors () {
 }
 
 function updateServer () {
-  const msg = { targetId: targetHex.id }
+  const msg = { }
   socket.emit('clientUpdateServer', msg)
 }
 
