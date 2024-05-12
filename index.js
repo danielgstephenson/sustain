@@ -19,14 +19,12 @@ if (fileExists) {
 
 const mapRadius = 10
 const restartTime = 5
-const dt = 0.02
-const winRate = 0.0003
-const cycleLength = 100
-const lifeLength = 100
-const deathLength = 100
-const waitLength = 300
-
-let aging = true
+const dt = 0.04
+const winRate = 0.0007
+const cycleLength = 150
+const lifeLength = 200
+const deathLength = 200
+const waitLength = 200
 
 let gameId = Math.random()
 let nodes = []
@@ -44,6 +42,7 @@ io.on('connection', socket => {
   const player = makePlayer(socket.id)
   socket.on('clientUpdateServer', message => {
     const team = teams[player.teamId]
+    team.targetId = message.targetId
     const reply = {
       team: player.teamId,
       wait: team.wait,
@@ -54,8 +53,9 @@ io.on('connection', socket => {
     }
     socket.emit('updateClient', reply)
   })
-  socket.on('activate', message => {
-    activate(player.teamId, message.id)
+  socket.on('target', message => {
+    teams[player.teamId].targetId = message.id
+    // activate(player.teamId, message.id)
   })
   socket.on('disconnect', () => {
     const team = teams[player.teamId]
@@ -83,6 +83,11 @@ function update () {
     activate(2, node.id)
   }
   Object.values(teams).forEach(team => {
+    if (team.wait === 0) {
+      activate(team.id, team.targetId)
+    }
+  })
+  Object.values(teams).forEach(team => {
     team.step = clamp(0, waitLength, team.step + 1)
     team.wait = 1 - team.step / waitLength
     team.nodeCount = nodes.filter(node => node.align === team.id).length
@@ -94,51 +99,47 @@ function update () {
       otherTeam.score = clamp(0, 1, otherTeam.score - winRate)
     }
   })
-  aging = !aging
-  if (aging) {
-    nodes.forEach(node => {
-      if (node.align === 0) {
-        node.step = (node.step + 1) % (cycleLength + 1)
-      } else {
-        node.step += 1
+  nodes.forEach(node => {
+    if (node.align === 0) {
+      node.step = (node.step + 1) % (cycleLength + 1)
+    } else {
+      node.step += 1
+    }
+  })
+  nodes.forEach(node => {
+    node.invasion = { 1: 0, 2: 0 }
+  })
+  nodes.forEach(node => {
+    if (node.align === 0) {
+      const neighbors = node.neighbors.map(i => nodes[i])
+      node.invasion[1] = neighbors.filter(neighbor => neighbor.align === 1).length
+      node.invasion[2] = neighbors.filter(neighbor => neighbor.align === 2).length
+    }
+  })
+  nodes.forEach(node => {
+    if (node.align === 0 && node.step === 0) {
+      if (node.invasion[1] > node.invasion[2]) {
+        node.align = 1
+        node.step = 0
       }
-    })
-  } else {
-    nodes.forEach(node => {
-      node.invasion = { 1: 0, 2: 0 }
-    })
-    nodes.forEach(node => {
-      if (node.align === 0) {
-        const neighbors = node.neighbors.map(i => nodes[i])
-        node.invasion[1] = neighbors.filter(neighbor => neighbor.align === 1).length
-        node.invasion[2] = neighbors.filter(neighbor => neighbor.align === 2).length
+      if (node.invasion[2] > node.invasion[1]) {
+        node.align = 2
+        node.step = 0
       }
-    })
-    nodes.forEach(node => {
-      if (node.align === 0 && node.step === 0) {
-        if (node.invasion[1] > node.invasion[2]) {
-          node.align = 1
-          node.step = 0
-        }
-        if (node.invasion[2] > node.invasion[1]) {
-          node.align = 2
-          node.step = 0
-        }
-        if (node.invasion[1] === node.invasion[2] && node.invasion[1] > 0) {
-          node.align = 3
-          node.step = 0
-        }
-      }
-      if ([1, 2].includes(node.align) && node.step > lifeLength) {
+      if (node.invasion[1] === node.invasion[2] && node.invasion[1] > 0) {
         node.align = 3
         node.step = 0
       }
-      if (node.align === 3 && node.step > deathLength) {
-        node.align = 0
-        node.step = Math.ceil(0.6 * cycleLength)
-      }
-    })
-  }
+    }
+    if ([1, 2].includes(node.align) && node.step > lifeLength) {
+      node.align = 3
+      node.step = 0
+    }
+    if (node.align === 3 && node.step > deathLength) {
+      node.align = 0
+      node.step = Math.ceil(0.6 * cycleLength)
+    }
+  })
   nodes.forEach(node => {
     node.color = getColor(node.align, node.step)
   })
@@ -180,23 +181,25 @@ function createTeams () {
   teams = {
     1: {
       id: 1,
-      step: waitLength,
-      wait: 0,
+      step: 0,
+      wait: 1,
       nodeCount: 0,
       score: 0,
       playerCount: 0,
       victoryTime: 0,
-      victoryRatio: 0
+      victoryRatio: 0,
+      targetId: -1
     },
     2: {
       id: 2,
-      step: waitLength,
-      wait: 0,
+      step: 0,
+      wait: 1,
       nodeCount: 0,
       score: 0,
       playerCount: 0,
       victoryTime: 0,
-      victoryRatio: 0
+      victoryRatio: 0,
+      targetId: -1
     }
   }
 }

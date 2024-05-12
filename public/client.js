@@ -24,6 +24,9 @@ let gameOver = false
 window.oncontextmenu = () => false
 window.onmousedown = () => { console.log(msgLog) }
 
+setInterval(updateServer, 50)
+setInterval(drawOutline, 10)
+
 const socket = io()
 socket.on('updateClient', (msg) => {
   msgLog = msg
@@ -68,15 +71,14 @@ function setupMap () {
     hexes[node.id] = hex
     mapSvg.appendChild(hex)
     hex.onmouseover = () => {
-      targetHex = hex
+      // targetHex = hex
     }
     hex.onmouseleave = () => {
-      hex.style.strokeWidth = 0
-      targetHex = {}
+      // hex.style.strokeWidth = 0
+      // targetHex = {}
     }
     hex.onmousedown = () => {
       targetHex = hex
-      socket.emit('activate', { id: hex.id })
     }
   })
 }
@@ -88,11 +90,9 @@ function drawOutline () {
   if (targetHex.id && !gameOver) {
     const strokeWidth = 0.3
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference}`
-    if (nodes[targetHex.id].align === 0) {
-      const color = outlineColors[team]
-      targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
-      targetHex.style.strokeWidth = strokeWidth
-    }
+    const color = outlineColors[team]
+    targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
+    targetHex.style.strokeWidth = strokeWidth
   }
 }
 
@@ -110,7 +110,7 @@ function updateHexColors () {
 }
 
 function updateServer () {
-  const msg = { }
+  const msg = { targetId: targetHex.id }
   socket.emit('clientUpdateServer', msg)
 }
 
@@ -173,6 +173,3 @@ circle2.style.strokeDasharray = '0 1'
 circle2.style.strokeDashoffset = 0
 scoreSvg2.setAttributeNS(null, 'viewBox', '-0.35 -0.35 0.7 0.7')
 scoreSvg2.appendChild(circle2)
-
-setInterval(updateServer, 100)
-setInterval(drawOutline, 10)
