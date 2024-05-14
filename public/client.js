@@ -100,7 +100,8 @@ function drawOutline () {
     hex.style.strokeWidth = 0
   })
   if (targetHex.id && !gameOver) {
-    const strokeWidth = 0.3
+    mapSvg.insertBefore(targetHex, null)
+    const strokeWidth = 0.5
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference}`
     const color = outlineColors[teamId]
     targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
