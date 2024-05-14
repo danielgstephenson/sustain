@@ -137,7 +137,7 @@ function update () {
     }
     if (node.align === 3 && node.step > deathLength) {
       node.align = 0
-      node.step = Math.ceil(0.6 * cycleLength)
+      node.step = 1
     }
   })
   nodes.forEach(node => {

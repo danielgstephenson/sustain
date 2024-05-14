@@ -5,6 +5,8 @@ const countDiv1 = document.getElementById('countDiv1')
 const countDiv2 = document.getElementById('countDiv2')
 const svgns = 'http://www.w3.org/2000/svg'
 const mapSvg = document.getElementById('mapSvg')
+const upperMapDiv = document.getElementById('upperMapDiv')
+const lowerMapDiv = document.getElementById('lowerMapDiv')
 const crownSvg1 = document.getElementById('crownSvg1')
 const crownSvg2 = document.getElementById('crownSvg2')
 const scoreSvg1 = document.getElementById('scoreSvg1')
@@ -56,6 +58,11 @@ socket.on('updateClient', (msg) => {
   } else {
     crown1.style.opacity = 0
     crown2.style.opacity = 0
+  }
+  if (window.innerWidth > window.innerHeight) {
+    upperMapDiv.appendChild(mapSvg)
+  } else {
+    lowerMapDiv.appendChild(mapSvg)
   }
   updateHexColors()
   drawOutline()
@@ -133,11 +140,11 @@ range(6).forEach(i => {
 })
 const circumference = 6 * 12 * hexRadius * Math.sin(1 / 12)
 
-const crownTop = 40
+const crownTop = 80
 const crownLeft = 10
 const crownRight = 90
 const crownBottom = 0
-const crownDip = 25
+const crownDip = 50
 let crownPoints = ''
 crownPoints += `${0.00 * crownRight + 1.00 * crownLeft},${100 - crownTop} `
 crownPoints += `${0.25 * crownRight + 0.75 * crownLeft},${100 - crownDip} `
