@@ -5,10 +5,12 @@ const countDiv1 = document.getElementById('countDiv1')
 const countDiv2 = document.getElementById('countDiv2')
 const svgns = 'http://www.w3.org/2000/svg'
 const mapSvg = document.getElementById('mapSvg')
-const scoreSvg1 = document.getElementById('scoreSvg1')
-const scoreSvg2 = document.getElementById('scoreSvg2')
 const crownSvg1 = document.getElementById('crownSvg1')
 const crownSvg2 = document.getElementById('crownSvg2')
+const scoreSvg1 = document.getElementById('scoreSvg1')
+const scoreSvg2 = document.getElementById('scoreSvg2')
+const timerSvg1 = document.getElementById('timerSvg1')
+const timerSvg2 = document.getElementById('timerSvg2')
 
 let nodes = []
 let hexes = []
@@ -26,7 +28,6 @@ window.oncontextmenu = () => false
 window.onmousedown = () => { console.log(msgLog) }
 
 setInterval(updateServer, 50)
-setInterval(drawOutline, 10)
 
 const socket = io()
 socket.on('updateClient', (msg) => {
@@ -57,9 +58,10 @@ socket.on('updateClient', (msg) => {
     crown2.style.opacity = 0
   }
   updateHexColors()
+  drawOutline()
 })
 
-const radius = 0.9
+const hexRadius = 0.95
 
 function setupMap () {
   mapSvg.innerHTML = ''
@@ -74,11 +76,10 @@ function setupMap () {
     hexes[node.id] = hex
     mapSvg.appendChild(hex)
     hex.onmouseover = () => {
-      // targetHex = hex
+      //
     }
     hex.onmouseleave = () => {
-      // hex.style.strokeWidth = 0
-      // targetHex = {}
+      //
     }
     hex.onmousedown = () => {
       const msg = { targetId: hex.id }
@@ -98,6 +99,11 @@ function drawOutline () {
     targetHex.style.stroke = `hsla(${color.H}, ${color.S}%, ${color.L}%)`
     targetHex.style.strokeWidth = strokeWidth
   }
+  const wait1 = teams[1].wait
+  const wait2 = teams[2].wait
+  console.log(wait1, wait2)
+  timerHex1.style.strokeDasharray = `${(1 - wait1) * circumference} ${wait1 * circumference}`
+  timerHex2.style.strokeDasharray = `${(1 - wait2) * circumference} ${wait2 * circumference}`
 }
 
 const outlineColors = {
@@ -118,14 +124,14 @@ function updateServer () {
   socket.emit('clientUpdateServer', msg)
 }
 
-let hexPoints = `${radius},0`
+let hexPoints = `${hexRadius},0`
 range(6).forEach(i => {
   const angle = 2 * Math.PI * (i + 1) / 6
-  const x = Math.cos(angle) * radius
-  const y = Math.sin(angle) * radius
+  const x = Math.cos(angle) * hexRadius
+  const y = Math.sin(angle) * hexRadius
   hexPoints = hexPoints + ` ${x},${y}`
 })
-const circumference = 6 * 12 * radius * Math.sin(1 / 12)
+const circumference = 6 * 12 * hexRadius * Math.sin(1 / 12)
 
 const crownTop = 40
 const crownLeft = 10
@@ -177,3 +183,19 @@ circle2.style.strokeDasharray = '0 1'
 circle2.style.strokeDashoffset = 0
 scoreSvg2.setAttributeNS(null, 'viewBox', '-0.35 -0.35 0.7 0.7')
 scoreSvg2.appendChild(circle2)
+
+timerSvg1.setAttributeNS(null, 'viewBox', '-2 -2 4 4')
+const timerHex1 = document.createElementNS(svgns, 'polygon')
+// timerHex1.style.strokeDasharray = `0 ${circumference}`
+timerHex1.setAttributeNS(null, 'points', hexPoints)
+timerHex1.style.stroke = 'hsl(240, 100%, 50%)'
+timerHex1.style.strokeWidth = 0.2
+timerSvg1.appendChild(timerHex1)
+
+timerSvg2.setAttributeNS(null, 'viewBox', '-2 -2 4 4')
+const timerHex2 = document.createElementNS(svgns, 'polygon')
+timerHex2.setAttributeNS(null, 'points', hexPoints)
+// timerHex2.style.strokeDasharray = `0 ${circumference}`
+timerHex2.style.stroke = 'hsl(0, 100%, 40%)'
+timerHex2.style.strokeWidth = 0.2
+timerSvg2.appendChild(timerHex2)

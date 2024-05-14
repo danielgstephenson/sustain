@@ -20,11 +20,11 @@ if (fileExists) {
 const mapRadius = 10
 const restartTime = 5
 const dt = 0.04
-const winRate = 0.0007
-const cycleLength = 150
-const lifeLength = 200
-const deathLength = 200
-const waitLength = 200
+const winRate = 0.0005
+const cycleLength = 300
+const lifeLength = 400
+const deathLength = 400
+const waitLength = 400
 
 let gameId = Math.random()
 let nodes = []
@@ -79,11 +79,12 @@ function update () {
   if (ai && teams[2].wait === 0) {
     const nodes0 = nodes.filter(node => node.align === 0)
     const node = choose(nodes0)
-    activate(2, node.id)
+    teams[2].targetId = node.id
+    activate(2)
   }
   Object.values(teams).forEach(team => {
     if (team.wait === 0) {
-      activate(team.id, team.targetId)
+      activate(team.id)
     }
   })
   Object.values(teams).forEach(team => {
@@ -144,15 +145,22 @@ function update () {
   })
 }
 
-function activate (teamId, nodeId) {
+function activate (teamId) {
   const team = teams[teamId]
+  const otherTeam = teams[3 - teamId]
   if (team.wait === 0) {
-    const node = nodes[nodeId]
+    const node = nodes[team.targetId]
     if (node && node.align === 0) {
-      node.align = teamId
-      node.step = 0
       team.step = 0
       team.wait = 1
+      node.step = 0
+      if (otherTeam.wait === 0 && otherTeam.targetId === team.targetId) {
+        otherTeam.step = 0
+        otherTeam.wait = 1
+        node.align = 3
+      } else {
+        node.align = teamId
+      }
     }
   }
 }
@@ -279,12 +287,12 @@ function getColor (align, step) {
     const B = 60 * step / lifeLength
     return `hwb(${H} ${W}% ${B}%)`
   } else if (align === 3) {
-    const w0 = 5
-    const w1 = 30
+    const w0 = 10
+    const w1 = 50
     const alpha = step / deathLength
     const H = 40
     const W = (w1 * alpha + w0 * (1 - alpha))
-    const B = 90 - W
+    const B = 100 - W
     return `hwb(${H} ${W}% ${B}%)`
   } else {
     throw new Error(`align=${align} out of range in getColor`)
