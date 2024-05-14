@@ -22,7 +22,6 @@ let mapRadius = 1
 let teamId = 0
 let wait = 0
 let targetId = -1
-let targetHex = {}
 let msgLog = {}
 let gameOver = false
 
@@ -36,15 +35,14 @@ socket.on('updateClient', (msg) => {
   msgLog = msg
   nodes = msg.nodes
   teamId = msg.teamId
-  targetId = msg.targetId
   wait = msg.wait
   teams = msg.teams
+  targetId = msg.targetId
   if (msg.gameId !== gameId) {
     mapRadius = msg.mapRadius
     gameId = msg.gameId
     setupMap()
   }
-  if (teams[teamId] && hexes[targetId]) targetHex = hexes[targetId]
   countDiv1.innerHTML = teams[1].nodeCount
   countDiv2.innerHTML = teams[2].nodeCount
   circle1.style.strokeDasharray = `${teams[1].score} ${1 - teams[1].score}`
@@ -99,8 +97,9 @@ function drawOutline () {
   hexes.forEach(hex => {
     hex.style.strokeWidth = 0
   })
-  if (targetHex.id && !gameOver) {
-    mapSvg.insertBefore(targetHex, null)
+  if (hexes[targetId] && !gameOver) {
+    const targetHex = hexes[targetId]
+    mapSvg.appendChild(targetHex)
     const strokeWidth = 0.5
     targetHex.style.strokeDasharray = `${(1 - wait) * circumference} ${wait * circumference}`
     const color = outlineColors[teamId]
@@ -194,7 +193,6 @@ scoreSvg2.appendChild(circle2)
 
 timerSvg1.setAttributeNS(null, 'viewBox', '-2 -2 4 4')
 const timerHex1 = document.createElementNS(svgns, 'polygon')
-// timerHex1.style.strokeDasharray = `0 ${circumference}`
 timerHex1.setAttributeNS(null, 'points', hexPoints)
 timerHex1.style.stroke = 'hsl(240, 100%, 50%)'
 timerHex1.style.strokeWidth = 0.2
@@ -203,7 +201,6 @@ timerSvg1.appendChild(timerHex1)
 timerSvg2.setAttributeNS(null, 'viewBox', '-2 -2 4 4')
 const timerHex2 = document.createElementNS(svgns, 'polygon')
 timerHex2.setAttributeNS(null, 'points', hexPoints)
-// timerHex2.style.strokeDasharray = `0 ${circumference}`
 timerHex2.style.stroke = 'hsl(0, 100%, 40%)'
 timerHex2.style.strokeWidth = 0.2
 timerSvg2.appendChild(timerHex2)
