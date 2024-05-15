@@ -6,11 +6,18 @@ body {
   padding: 0;
   overflow: hidden; 
   align-items: center;
+  cursor: none;
 }
 #mapSvg {
   background-color: hsl(0, 0%, 87%)ck;
   min-width: 100vmin;
   min-height: 100vmin;
+}
+#cursorDiv {
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  left: 0;
 }
 #mainDiv {
   display: flex;
@@ -21,26 +28,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: top;
+  justify-content: center;
 }
 #teamDiv2 {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: top;
-}
-#countDiv1 {
-  color: hsl(240, 100%, 50%);
-  font-size: 10vmin;
-  text-align: center;
-  font-family: sans-serif;
-  display: flex;
-}
-#countDiv2 {
-  color: hsl(0, 100%, 40%);
-  font-size: 10vmin;
-  text-align: center;
-  font-family: sans-serif;
-  display: flex;
+  justify-content: center;
 }

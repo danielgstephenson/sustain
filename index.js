@@ -19,7 +19,7 @@ if (fileExists) {
 
 const mapRadius = 10
 const restartTime = 5
-const dt = 0.04
+const dt = 0.03
 const winRate = 0.0005
 const cycleLength = 300
 const lifeLength = 400
