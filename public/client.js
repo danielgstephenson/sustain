@@ -27,7 +27,7 @@ let gameOver = false
 window.oncontextmenu = () => false
 window.onmousedown = () => { console.log(msgLog) }
 document.onmousemove = event => {
-  console.log(event)
+  //console.log(event)
   cursorDiv.style.left = `${event.pageX - 0.5 * cursorDiv.offsetWidth}px`
   cursorDiv.style.top = `${event.pageY - 0.5 * cursorDiv.offsetHeight}px`
   if (event.sourceCapabilities.firesTouchEvents) {
