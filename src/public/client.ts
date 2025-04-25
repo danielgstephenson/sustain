@@ -13,8 +13,13 @@ export class Client {
       console.log('connected')
       setInterval(() => this.updateServer(), 1000 / 5)
     })
-    this.socket.on('cells', (manifold: ManifoldSummary) => {
+    this.socket.on('setup', (manifold: ManifoldSummary) => {
       this.manifold = manifold
+      this.renderer.setup()
+    })
+    this.socket.on('update', (manifold: ManifoldSummary) => {
+      this.manifold = manifold
+      this.renderer.update()
     })
     document.onmousedown = (event: MouseEvent) => {
       console.log('cells', this.manifold)
@@ -22,6 +27,6 @@ export class Client {
   }
 
   updateServer (): void {
-    this.socket.emit('input')
+    this.socket.emit('update')
   }
 }

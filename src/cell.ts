@@ -1,12 +1,11 @@
-import { choose } from './math'
-
 export class Cell {
-  neighbors: number[] = []
+  neighbors: Cell[] = []
+  connections: Cell[] = []
   index: number
   x: number
   y: number
-  align = choose([0, 1, 2])
-  age = 0
+  state = 0 // choose([0, 1, 2])
+  visited = false
 
   constructor (index: number, x: number, y: number) {
     this.index = index

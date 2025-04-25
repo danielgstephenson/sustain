@@ -1,71 +1,60 @@
-import { Cell } from '../cell'
 import { ManifoldSummary } from '../summaries/manifoldSummary'
 import { Client } from './client'
+import { Rect, SVG, Svg } from '@svgdotjs/svg.js'
 
 export class Renderer {
   manifold?: ManifoldSummary
   client: Client
-  canvas: HTMLCanvasElement
-  context: CanvasRenderingContext2D
+  svg: Svg
+  squares: Rect[] = []
+  colors = [
+    'hsl(180, 20%, 12%)',
+    'hsl(230, 100%, 50%)',
+    'hsl(120, 100%, 35%)',
+    'hsl(230, 20%, 50%)',
+    'hsl(120, 20%, 35%)',
+    'hsl(0, 100%, 40%)'
+  ]
 
   constructor (client: Client) {
     this.client = client
-    this.canvas = document.getElementById('canvas') as HTMLCanvasElement
-    this.context = this.canvas.getContext('2d') as CanvasRenderingContext2D
-    this.draw()
+    this.svg = SVG()
+    this.svg.addTo('#interfaceDiv')
+    this.svg.size('100vmin', '100vmin')
   }
 
-  draw (): void {
-    window.requestAnimationFrame(() => this.draw())
-    this.setupCanvas()
-    this.resetContext()
+  setup (): void {
     this.manifold = this.client.manifold
     if (this.manifold == null) return
-    this.manifold.cells.forEach(cell => this.drawCell(cell))
-    this.manifold.cells.forEach(cell => this.drawWalls(cell))
+    const size = this.manifold.size
+    this.svg.viewbox(`-1 -1 ${size + 2} ${size + 2}`)
+    this.squares = []
+    this.manifold.cells.forEach(cell => {
+      const color = this.colors[cell.state]
+      const rect = this.svg.rect(1, 1)
+      this.squares[cell.index] = rect
+      rect.fill(color)
+      rect.move(cell.x, cell.y)
+      rect.attr('shape-rendering', 'crispEdges')
+      rect.click(event => {
+        this.client.socket.emit('click', cell.index)
+      })
+    })
+    const wallColor = 'hsl(180, 10%, 30%)'
+    this.manifold.walls.forEach(wall => {
+      const line = this.svg.line(wall.a.x, wall.a.y, wall.b.x, wall.b.y)
+      line.stroke({ color: wallColor, width: 0.2, linejoin: 'round', linecap: 'round' })
+    })
   }
 
-  drawCell (cell: Cell): void {
+  update (): void {
+    this.manifold = this.client.manifold
     if (this.manifold == null) return
-    const x = cell.x
-    const y = cell.y
-    const dim = cell.align === 2 ? 0.6 : 1
-    const H = cell.align === 1 ? 240 : 120
-    const S = cell.align === 0 ? 0 : 100
-    const L = cell.align === 0 ? 20 : 50 * dim
-    this.context.fillStyle = `hsl(${H} ${S} ${L})`
-    this.context.beginPath()
-    this.context.rect(x - 0.5, y - 0.5, 1, 1)
-    this.context.fill()
-  }
-
-  drawWalls (cell: Cell): void {
-    if (this.manifold == null) return
-    const x = cell.x
-    const y = cell.y
-    this.context.strokeStyle = 'hsl(0 0 0)'
-    this.context.lineWidth = 0.2
-    this.context.beginPath()
-    this.context.rect(x - 0.5, y - 0.5, 1, 1)
-    this.context.stroke()
-  }
-
-  setupCanvas (): void {
-    if (this.manifold == null) return
-    const vmin = Math.min(window.innerWidth, window.innerHeight)
-    this.canvas.width = vmin
-    this.canvas.height = vmin
-  }
-
-  resetContext (): void {
-    if (this.manifold == null) return
-    this.context.resetTransform()
-    this.context.translate(0.5 * this.canvas.width, 0.5 * this.canvas.height)
-    const vmin = Math.min(this.canvas.width, this.canvas.height)
-    const scale = vmin / (this.manifold.size)
-    this.context.scale(scale, -scale)
-    const offset = -0.5 * (this.manifold.size - 1)
-    this.context.translate(offset, offset)
-    this.context.globalAlpha = 1
+    this.manifold.cells.forEach(cell => {
+      const square = this.squares[cell.index]
+      if (square == null) return
+      const color = this.colors[cell.state]
+      square.fill(color)
+    })
   }
 }

@@ -1,5 +1,5 @@
 body {
-  background-color: black;
+  background-color: hsl(0, 0%, 12%);
   margin: 0
 }
 #interfaceDiv {
@@ -9,9 +9,7 @@ body {
   justify-content: center;
   align-items: center;
 }
-#canvas {
-  background-color: black;
-  image-rendering: pixelated;
+#graph {
   position: absolute;
   width: 100vmin;
   height: 100vmin;
