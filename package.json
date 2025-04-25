@@ -1,0 +1,33 @@
+{
+  "name": "sustain",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "scripts": {
+    "build:server": "npx tsc -build ./src",
+    "build:client": "npx parcel build ./src/public/client.html --dist-dir \"dist/public\"",
+    "build": "npm run build:server && npm run build:client",
+    "start": "node ./dist",
+    "dev": "npm run build && npm run start"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.14.1",
+    "parcel": "^2.14.4",
+    "ts-standard": "^12.0.2",
+    "typescript": "^5.8.3"
+  },
+  "ts-standard": {
+    "project": "src/tsconfig.json",
+    "ignore": [
+      "dist"
+    ]
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}
