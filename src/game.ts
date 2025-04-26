@@ -15,7 +15,7 @@ export class Game {
   actionSteps = 20
   decisionSteps = 100
   victorySteps = 40
-  countdown = 20
+  countdown = 100
   stepTime: number
 
   constructor () {
@@ -23,6 +23,7 @@ export class Game {
     this.teams[2] = new Team(2)
     this.setupIo()
     this.stepTime = 0.5 / this.server.config.timeScale
+    this.countdown = this.decisionSteps
     setInterval(() => this.step(), this.stepTime * 1000)
   }
 
