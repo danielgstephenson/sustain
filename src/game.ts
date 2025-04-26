@@ -11,16 +11,17 @@ export class Game {
   teams: Record<number, Team> = {}
   players: Player[] = []
   state = 'decision'
-  victoryScore = 1000
-  actionSteps = 10
-  decisionSteps = 20
+  victoryScore = 3000
+  actionSteps = 20
+  decisionSteps = 40
   countdown = 20
-  stepTime = 0.5
+  stepTime: number
 
   constructor () {
     this.teams[1] = new Team(1)
     this.teams[2] = new Team(2)
     this.setupIo()
+    this.stepTime = 0.5 / this.server.config.timeScale
     setInterval(() => this.step(), this.stepTime * 1000)
   }
 
@@ -31,10 +32,6 @@ export class Game {
       console.log('connect:', socket.id)
       socket.emit('connected')
       socket.emit('setup', this.manifold.summary)
-      socket.on('update', () => {
-        const summary = new GameSummary(this, player.team)
-        socket.emit('update', summary)
-      })
       socket.on('click', (index: number) => {
         const cell = this.manifold.cells[index]
         const team = this.teams[player.team]
@@ -57,14 +54,17 @@ export class Game {
   step (): void {
     if (this.state === 'action') {
       this.actionStep()
-      return
-    }
-    if (this.state === 'decision') {
+    } else if (this.state === 'decision') {
       this.decisionStep()
-    }
-    if (this.state === 'victory') {
+    } else if (this.state === 'victory') {
       this.victoryStep()
     }
+    const summary1 = new GameSummary(this, 1)
+    const summary2 = new GameSummary(this, 2)
+    this.players.forEach(player => {
+      const summary = player.team === 1 ? summary1 : summary2
+      player.socket.emit('step', summary)
+    })
   }
 
   victoryStep (): void {
@@ -78,7 +78,9 @@ export class Game {
         player.team = 0
       })
       this.players.forEach(player => {
-        player.team = this.getSmallTeam()
+        const smallTeam = this.getSmallTeam()
+        console.log('smallTeam', smallTeam)
+        player.team = smallTeam
       })
       this.countdown = this.decisionSteps
       this.state = 'decision'

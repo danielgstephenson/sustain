@@ -14,6 +14,7 @@ export class Client {
   ready2 = false
   score1 = 0
   score2 = 0
+  victoryScore = 3000
   victory1 = false
   victory2 = false
   choice?: number
@@ -23,18 +24,18 @@ export class Client {
     this.renderer = new Renderer(this)
     this.socket.on('connected', () => {
       console.log('connected')
-      setInterval(() => this.updateServer(), 1000 / 5)
     })
     this.socket.on('setup', (manifold: ManifoldSummary) => {
       this.manifold = manifold
       this.renderer.setup()
     })
-    this.socket.on('update', (gameSummary: GameSummary) => {
+    this.socket.on('step', (gameSummary: GameSummary) => {
       this.team = gameSummary.team
       this.ready1 = gameSummary.ready1
       this.ready2 = gameSummary.ready2
       this.score1 = gameSummary.score1
       this.score2 = gameSummary.score2
+      this.victoryScore = gameSummary.victoryScore
       this.victory1 = gameSummary.victory1
       this.victory2 = gameSummary.victory2
       this.countdown = gameSummary.countdown
@@ -50,9 +51,5 @@ export class Client {
     document.onmousedown = (event: MouseEvent) => {
       console.log('cells', this.manifold)
     }
-  }
-
-  updateServer (): void {
-    this.socket.emit('update')
   }
 }

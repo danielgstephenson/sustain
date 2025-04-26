@@ -14,7 +14,10 @@ body {
   width: 20vw;
   height: 90vh;
   font-family: sans-serif;
-  font-size: 2vw;
+  font-size: 1.7vw;
   text-align: center;
   color: white;
+}
+.labelDiv {
+  height: 10vh;
 }

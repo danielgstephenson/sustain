@@ -9,7 +9,7 @@ export class Manifold {
   grid: Cell[][] = []
   walls: Wall[] = []
   summary: ManifoldSummary
-  size = 12
+  size = 20
 
   constructor () {
     this.grid = range(this.size).map(() => [])

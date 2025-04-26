@@ -15,8 +15,10 @@ export class Config {
       const json = fs.readJSONSync(configPath)
       if (typeof json.port === 'number') this.port = json.port
       if (typeof json.secure === 'boolean') this.secure = json.secure
+      if (typeof json.timeScale === 'number') this.timeScale = json.timeScale
     }
     console.log('port:', this.port)
     console.log('secure:', this.secure)
+    console.log('timeScale:', this.timeScale)
   }
 }

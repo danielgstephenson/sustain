@@ -44,7 +44,8 @@ export class Renderer {
     this.manifold = this.client.manifold
     if (this.manifold == null) return
     const size = this.manifold.size
-    this.svg.viewbox(`-1 -1 ${size + 2} ${size + 2}`)
+    const padding = 0.5
+    this.svg.viewbox(`-${padding} -${padding} ${size + 2 * padding} ${size + 2 * padding}`)
     this.squares = []
     this.manifold.cells.forEach(cell => {
       const color = this.colors[cell.state]
@@ -95,8 +96,8 @@ export class Renderer {
         }
       }
     })
-    this.scoreDiv1.innerHTML = `Score: ${this.client.score1}`
-    this.scoreDiv2.innerHTML = `Score: ${this.client.score2}`
+    this.scoreDiv1.innerHTML = `Score: ${this.client.score1} / ${this.client.victoryScore}`
+    this.scoreDiv2.innerHTML = `Score: ${this.client.score2} / ${this.client.victoryScore}`
     if (this.client.gameState === 'action') {
       this.titleDiv1.innerHTML = 'Action'
       this.titleDiv2.innerHTML = 'Action'
