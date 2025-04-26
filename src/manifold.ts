@@ -8,13 +8,51 @@ export class Manifold {
   cells: Cell[] = []
   grid: Cell[][] = []
   walls: Wall[] = []
-  size = 20
+  summary: ManifoldSummary
+  size = 12
 
   constructor () {
     this.grid = range(this.size).map(() => [])
     this.buildCells()
     this.buildConnections()
     this.buildWalls()
+    this.summary = this.summarize()
+  }
+
+  step (): void {
+    const lagManifold = this.summarize()
+    this.cells.forEach(cell => {
+      const lagCell = lagManifold.cells[cell.index]
+      if (lagCell.state === 1) {
+        cell.state = 3
+      }
+      if (lagCell.state === 2) {
+        cell.state = 3
+      }
+      if (lagCell.state === 3) {
+        cell.state = 0
+      }
+      if (lagCell.state === 0) {
+        const connections1 = lagCell.connections.filter(i => {
+          const lagConnection = lagManifold.cells[i]
+          return lagConnection.state === 1
+        })
+        const connections2 = lagCell.connections.filter(i => {
+          const lagConnection = lagManifold.cells[i]
+          return lagConnection.state === 2
+        })
+        if (connections1.length > 0 && connections2.length === 0) {
+          cell.state = 1
+        }
+        if (connections1.length === 0 && connections2.length > 0) {
+          cell.state = 2
+        }
+        if (connections1.length > 0 && connections2.length > 0) {
+          cell.state = 3
+        }
+      }
+    })
+    this.summary = this.summarize()
   }
 
   buildConnections (): void {

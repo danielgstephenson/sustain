@@ -6,6 +6,7 @@ export class CellSummary {
   y: number
   state: number
   connections: number[]
+  mouseover = false
 
   constructor (cell: Cell) {
     this.index = cell.index
