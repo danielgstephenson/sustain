@@ -13,7 +13,8 @@ export class Game {
   state = 'decision'
   victoryScore = 3000
   actionSteps = 20
-  decisionSteps = 40
+  decisionSteps = 100
+  victorySteps = 40
   countdown = 20
   stepTime: number
 
@@ -135,7 +136,7 @@ export class Game {
     }
     if (this.teams[1].victory || this.teams[2].victory) {
       this.state = 'victory'
-      this.countdown = this.decisionSteps
+      this.countdown = this.victorySteps
       return
     }
     this.countdown = Math.max(0, this.countdown - 1)
