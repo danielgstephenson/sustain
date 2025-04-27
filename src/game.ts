@@ -13,7 +13,7 @@ export class Game {
   state = 'decision'
   victoryScore = 3000
   actionSteps = 20
-  decisionSteps = 100
+  decisionSteps = 30
   victorySteps = 40
   countdown = 100
   stepTime: number
@@ -37,13 +37,13 @@ export class Game {
       socket.on('click', (index: number) => {
         const cell = this.manifold.cells[index]
         const team = this.teams[player.team]
-        if (team.choice == null && cell.state === 0) {
-          team.choice = index
-          const otherTeam = this.teams[3 - player.team]
-          const otherTeamCount = this.getPlayerCount(3 - player.team)
-          if (otherTeamCount === 0) {
-            otherTeam.choice = this.getBotChoice()
-          }
+        if (cell.state === 0) {
+          team.choices.push(index)
+          // const otherTeam = this.teams[3 - player.team]
+          // const otherTeamCount = this.getPlayerCount(3 - player.team)
+          // if (otherTeamCount === 0) {
+          //   otherTeam.choices = this.getBotChoice()
+          // }
         }
       })
       socket.on('disconnect', () => {
@@ -93,40 +93,38 @@ export class Game {
   }
 
   decisionStep (): void {
-    const choice1 = this.teams[1].choice
-    const choice2 = this.teams[2].choice
-    const ready1 = choice1 != null
-    const ready2 = choice2 != null
-    const bothReady = ready1 && ready2
-    if (bothReady || this.countdown === 0) {
+    const choices1 = this.teams[1].choices
+    const choices2 = this.teams[2].choices
+    if (this.countdown === 0) {
       this.state = 'action'
       this.countdown = this.actionSteps
-      if (bothReady && choice1 === choice2) {
-        const cell = this.manifold.cells[choice1]
-        cell.state = 4
-        return
-      }
-      if (choice1 != null) {
-        const cell1 = this.manifold.cells[choice1]
-        cell1.state = 1
-      }
-      if (choice2 != null) {
-        const cell2 = this.manifold.cells[choice2]
-        cell2.state = 2
-      }
+      choices1.forEach(choice => {
+        const cell = this.manifold.cells[choice]
+        if (choices2.includes(choice)) {
+          cell.state = 3
+          return
+        }
+        cell.state = 1
+      })
+      choices2.forEach(choice => {
+        const cell = this.manifold.cells[choice]
+        if (choices1.includes(choice)) {
+          cell.state = 3
+          return
+        }
+        cell.state = 2
+      })
       return
     }
-    if (ready1 || ready2) {
-      this.countdown = Math.max(0, this.countdown - 1)
-    }
+    this.countdown = Math.max(0, this.countdown - 1)
   }
 
   actionStep (): void {
     this.manifold.step()
     const cellCount1 = this.manifold.cells.filter(c => c.state === 1).length
     const cellCount2 = this.manifold.cells.filter(c => c.state === 2).length
-    this.teams[1].score += cellCount1
-    this.teams[2].score += cellCount2
+    this.teams[1].score = cellCount1
+    this.teams[2].score = cellCount2
     const score1 = this.teams[1].score
     const score2 = this.teams[2].score
     if (score1 > score2 && score1 > this.victoryScore) {
@@ -144,8 +142,8 @@ export class Game {
     if (this.countdown === 0 || cellCount1 + cellCount2 === 0) {
       this.state = 'decision'
       this.countdown = this.decisionSteps
-      this.teams[1].choice = undefined
-      this.teams[2].choice = undefined
+      this.teams[1].choices = []
+      this.teams[2].choices = []
     }
   }
 

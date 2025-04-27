@@ -1,21 +1,16 @@
 import { Cell } from './cell'
-import { choose, range } from './math'
+import { range } from './math'
+import { CellSummary } from './summaries/cellSummary'
 import { ManifoldSummary } from './summaries/manifoldSummary'
-import { Vec2 } from './Vec2'
-import { Wall } from './wall'
 
 export class Manifold {
+  size = 50
   cells: Cell[] = []
-  grid: Cell[][] = []
-  walls: Wall[] = []
+  grid: Cell[][] = range(this.size).map(() => [])
   summary: ManifoldSummary
-  size = 20
 
   constructor () {
-    this.grid = range(this.size).map(() => [])
     this.buildCells()
-    this.buildConnections()
-    this.buildWalls()
     this.summary = this.summarize()
   }
 
@@ -23,96 +18,37 @@ export class Manifold {
     const lagManifold = this.summarize()
     this.cells.forEach(cell => {
       const lagCell = lagManifold.cells[cell.index]
+      const count1 = this.countNeighbors(lagCell, lagManifold, 1)
+      const count2 = this.countNeighbors(lagCell, lagManifold, 2)
       if (lagCell.state === 1) {
-        cell.state = 3
+        if (count1 < 2) cell.state = 1
+        if (count1 > 2) cell.state = 3
       }
       if (lagCell.state === 2) {
-        cell.state = 3
+        if (count2 < 2) cell.state = 2
+        if (count2 > 2) cell.state = 3
       }
       if (lagCell.state === 3) {
+        cell.state = 4
+      }
+      if (lagCell.state === 4) {
         cell.state = 0
       }
       if (lagCell.state === 0) {
-        const connections1 = lagCell.connections.filter(i => {
-          const lagConnection = lagManifold.cells[i]
-          return lagConnection.state === 1
-        })
-        const connections2 = lagCell.connections.filter(i => {
-          const lagConnection = lagManifold.cells[i]
-          return lagConnection.state === 2
-        })
-        if (connections1.length > 0 && connections2.length === 0) {
-          cell.state = 1
-        }
-        if (connections1.length === 0 && connections2.length > 0) {
-          cell.state = 2
-        }
-        if (connections1.length > 0 && connections2.length > 0) {
-          cell.state = 3
-        }
+        if (count1 > 0 && count2 > 0) cell.state = 3
+        if (count1 > 2) cell.state = 1
+        if (count2 > 2) cell.state = 2
       }
     })
     this.summary = this.summarize()
   }
 
-  buildConnections (): void {
-    const startIndex = choose(range(this.cells.length))
-    const startCell = this.cells[startIndex]
-    startCell.visited = true
-    const stack = [startCell]
-    while (stack.length > 0) {
-      const current = stack.pop()
-      if (current == null) break
-      const options = current.neighbors.filter(neighbor => !neighbor.visited)
-      if (options.length === 0) continue
-      stack.push(current)
-      const choice = choose(options)
-      current.connections.push(choice)
-      choice.connections.push(current)
-      choice.visited = true
-      stack.push(choice)
-    }
-    this.cells.forEach(cell => {
-      if (cell.connections.length > 1) return
-      const options = cell.neighbors.filter(neighbor => {
-        return !cell.connections.includes(neighbor)
-      })
-      if (options.length === 0) return
-      const choice = choose(options)
-      cell.connections.push(choice)
-      choice.connections.push(cell)
+  countNeighbors (cell: CellSummary, manifold: ManifoldSummary, state: number): number {
+    const neighbors = cell.neighbors.filter(i => {
+      const neighbor = manifold.cells[i]
+      return neighbor.state === state
     })
-  }
-
-  buildWalls (): void {
-    const topLeft = new Vec2(0, 0)
-    const topRight = new Vec2(this.size, 0)
-    const bottomLeft = new Vec2(0, this.size)
-    const bottomRight = new Vec2(this.size, this.size)
-    this.walls.push(new Wall(topLeft, topRight))
-    this.walls.push(new Wall(bottomLeft, bottomRight))
-    this.walls.push(new Wall(topLeft, bottomLeft))
-    this.walls.push(new Wall(topRight, bottomRight))
-    this.cells.forEach(cell => {
-      cell.neighbors.forEach(neighbor => {
-        if (cell.index > neighbor.index) return
-        if (cell.connections.includes(neighbor)) return
-        if (cell.x === neighbor.x) {
-          const x = cell.x
-          const y = Math.max(cell.y, neighbor.y)
-          const top = new Vec2(x, y)
-          const bottom = new Vec2(x + 1, y)
-          this.walls.push(new Wall(top, bottom))
-        }
-        if (cell.y === neighbor.y) {
-          const x = Math.max(cell.x, neighbor.x)
-          const y = cell.y
-          const left = new Vec2(x, y)
-          const right = new Vec2(x, y + 1)
-          this.walls.push(new Wall(left, right))
-        }
-      })
-    })
+    return neighbors.length
   }
 
   buildCells (): void {
@@ -133,6 +69,10 @@ export class Manifold {
       if (x < max) cell.neighbors.push(this.grid[x + 1][y])
       if (y > min) cell.neighbors.push(this.grid[x][y - 1])
       if (y < max) cell.neighbors.push(this.grid[x][y + 1])
+      if (x > min && y > min) cell.neighbors.push(this.grid[x - 1][y - 1])
+      if (x > min && y < max) cell.neighbors.push(this.grid[x - 1][y + 1])
+      if (x < max && y < max) cell.neighbors.push(this.grid[x + 1][y + 1])
+      if (x < max && y > min) cell.neighbors.push(this.grid[x + 1][y - 1])
     })
   }
 

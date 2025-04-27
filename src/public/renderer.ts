@@ -16,11 +16,11 @@ export class Renderer {
   countdownDiv1: HTMLDivElement
   countdownDiv2: HTMLDivElement
   colors = [
-    'hsl(180, 20%, 12%)',
+    'hsl(0, 0%, 0%)',
     'hsl(220, 100%, 50%)',
-    'hsl(120, 100%, 35%)',
-    'hsl(180, 20%, 50%)',
-    'hsl(180, 10%, 30%)'
+    'hsl(120, 100%, 33%)',
+    'hsl(180, 20%, 30%)',
+    'hsl(180, 20%, 20%)'
   ]
 
   constructor (client: Client) {
@@ -66,20 +66,20 @@ export class Renderer {
       })
       rect.mouseleave(event => {
         cell.mouseover = false
-        if (cell.state === 0 && this.client.thinking && this.client.gameState === 'decision') {
+        if (cell.state === 0 && this.client.gameState === 'decision') {
           const color = this.colors[0]
           rect.fill(color)
         }
       })
     })
-    const wallColor = 'hsl(180, 10%, 30%)'
-    this.manifold.walls.forEach(wall => {
-      const line = this.svg.line(wall.a.x, wall.a.y, wall.b.x, wall.b.y)
-      line.stroke({ color: wallColor, width: 0.2, linejoin: 'round', linecap: 'round' })
-    })
   }
 
   update (): void {
+    this.updateManifold()
+    this.updateInfo()
+  }
+
+  updateManifold (): void {
     this.manifold = this.client.manifold
     if (this.manifold == null) return
     this.manifold.cells.forEach(cell => {
@@ -89,31 +89,27 @@ export class Renderer {
       rect.fill(color)
       if (cell.state === 0 && this.client.gameState === 'decision') {
         const consider = cell.mouseover && this.client.thinking
-        const chosen = cell.index === this.client.choice && !this.client.thinking
+        const chosen = this.client.choices.includes(cell.index)
         if (consider || chosen) {
           const color = this.colors[this.client.team]
           rect.fill(color)
         }
       }
     })
+  }
+
+  updateInfo (): void {
     this.scoreDiv1.innerHTML = `Score: ${this.client.score1} / ${this.client.victoryScore}`
     this.scoreDiv2.innerHTML = `Score: ${this.client.score2} / ${this.client.victoryScore}`
+    this.countdownDiv1.innerHTML = `Countdown: ${this.client.countdown}`
+    this.countdownDiv2.innerHTML = `Countdown: ${this.client.countdown}`
     if (this.client.gameState === 'action') {
       this.titleDiv1.innerHTML = 'Action'
       this.titleDiv2.innerHTML = 'Action'
-      this.countdownDiv1.innerHTML = `Countdown: ${this.client.countdown}`
-      this.countdownDiv2.innerHTML = `Countdown: ${this.client.countdown}`
     }
     if (this.client.gameState === 'decision') {
       this.titleDiv1.innerHTML = this.client.ready1 ? 'Ready' : 'Thinking'
       this.titleDiv2.innerHTML = this.client.ready2 ? 'Ready' : 'Thinking'
-      if (this.client.ready1 || this.client.ready2) {
-        this.countdownDiv1.innerHTML = `Countdown: ${this.client.countdown}`
-        this.countdownDiv2.innerHTML = `Countdown: ${this.client.countdown}`
-      } else {
-        this.countdownDiv1.innerHTML = ''
-        this.countdownDiv2.innerHTML = ''
-      }
     }
     if (this.client.gameState === 'victory') {
       this.titleDiv1.innerHTML = this.client.victory1 ? 'VICTORY!' : ''

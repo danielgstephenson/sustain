@@ -5,7 +5,7 @@ export class CellSummary {
   x: number
   y: number
   state: number
-  connections: number[]
+  neighbors: number[]
   mouseover = false
 
   constructor (cell: Cell) {
@@ -13,6 +13,6 @@ export class CellSummary {
     this.x = cell.x
     this.y = cell.y
     this.state = cell.state
-    this.connections = cell.connections.map(x => x.index)
+    this.neighbors = cell.neighbors.map(x => x.index)
   }
 }

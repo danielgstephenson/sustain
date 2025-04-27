@@ -4,7 +4,7 @@ export class GameSummary {
   team: number
   gameState: string
   countdown: number
-  choice?: number
+  choices: number[]
   ready1: boolean
   ready2: boolean
   score1: number
@@ -18,9 +18,9 @@ export class GameSummary {
     this.team = team
     this.gameState = game.state
     this.countdown = game.countdown
-    this.choice = game.teams[team].choice
-    this.ready1 = game.teams[1].choice != null
-    this.ready2 = game.teams[2].choice != null
+    this.choices = game.teams[team].choices
+    this.ready1 = game.teams[1].ready
+    this.ready2 = game.teams[2].ready
     this.score1 = game.teams[1].score
     this.score2 = game.teams[2].score
     this.victoryScore = game.victoryScore

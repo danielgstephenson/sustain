@@ -17,7 +17,7 @@ export class Client {
   victoryScore = 3000
   victory1 = false
   victory2 = false
-  choice?: number
+  choices: number[] = []
   thinking = true
 
   constructor () {
@@ -39,8 +39,8 @@ export class Client {
       this.victory1 = gameSummary.victory1
       this.victory2 = gameSummary.victory2
       this.countdown = gameSummary.countdown
-      this.choice = gameSummary.choice
-      this.thinking = gameSummary.choice == null
+      this.choices = gameSummary.choices
+      this.thinking = this.team === 1 ? !gameSummary.ready1 : !gameSummary.ready2
       this.gameState = gameSummary.gameState
       gameSummary.cellStates.forEach((state, i) => {
         if (this.manifold == null) return
