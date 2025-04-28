@@ -1,3 +1,4 @@
+import { CellSummary } from '../summaries/cellSummary'
 import { ManifoldSummary } from '../summaries/manifoldSummary'
 import { Client } from './client'
 import { Rect, SVG, Svg } from '@svgdotjs/svg.js'
@@ -15,12 +16,25 @@ export class Renderer {
   scoreDiv2: HTMLDivElement
   countdownDiv1: HTMLDivElement
   countdownDiv2: HTMLDivElement
+
+  considerColors = [
+    'hsl(0, 0%, 0%)',
+    'hsl(220, 100%, 70%)',
+    'hsl(120, 50%, 50%)'
+  ]
+
+  choiceColors = [
+    'hsl(0, 0%, 0%)',
+    'hsl(220, 100%, 70%)',
+    'hsl(120, 50%, 50%)'
+  ]
+
   colors = [
     'hsl(0, 0%, 0%)',
     'hsl(220, 100%, 50%)',
-    'hsl(120, 100%, 33%)',
-    'hsl(180, 20%, 30%)',
-    'hsl(180, 20%, 20%)'
+    'hsl(120, 100%, 30%)',
+    'hsl(180, 50%, 30%)',
+    'hsl(180, 50%, 20%)'
   ]
 
   constructor (client: Client) {
@@ -36,8 +50,8 @@ export class Renderer {
     this.scoreDiv2 = document.getElementById('scoreDiv2') as HTMLDivElement
     this.countdownDiv1 = document.getElementById('countdownDiv1') as HTMLDivElement
     this.countdownDiv2 = document.getElementById('countdownDiv2') as HTMLDivElement
-    this.teamDiv1.style.color = this.colors[1]
-    this.teamDiv2.style.color = this.colors[2]
+    this.teamDiv1.style.color = this.choiceColors[1]
+    this.teamDiv2.style.color = this.choiceColors[2]
   }
 
   setup (): void {
@@ -48,30 +62,50 @@ export class Renderer {
     this.svg.viewbox(`-${padding} -${padding} ${size + 2 * padding} ${size + 2 * padding}`)
     this.squares = []
     this.manifold.cells.forEach(cell => {
-      const color = this.colors[cell.state]
+      const color = this.getColor(cell)
       const rect = this.svg.rect(1, 1)
       this.squares[cell.index] = rect
       rect.fill(color)
       rect.move(cell.x, cell.y)
       rect.attr('shape-rendering', 'crispEdges')
       rect.click(event => {
-        this.client.socket.emit('click', cell.index)
+        if (this.client.gameState === 'decision') {
+          const chosen = this.client.choices.includes(cell.index)
+          if (chosen) {
+            this.client.choices = this.client.choices.filter(i => i !== cell.index)
+          } else {
+            this.client.choices.push(cell.index)
+          }
+          const chosen2 = this.client.choices.includes(cell.index)
+          console.log('chosen2', chosen2)
+          const color = this.getColor(cell)
+          console.log('click', color)
+          rect.fill(this.getColor(cell))
+          this.client.socket.emit('choices', this.client.choices)
+        }
       })
       rect.mouseenter(event => {
         cell.mouseover = true
-        if (cell.state === 0 && this.client.thinking && this.client.gameState === 'decision') {
-          const color = this.colors[this.client.team]
-          rect.fill(color)
-        }
+        rect.fill(this.getColor(cell))
       })
       rect.mouseleave(event => {
         cell.mouseover = false
-        if (cell.state === 0 && this.client.gameState === 'decision') {
-          const color = this.colors[0]
-          rect.fill(color)
-        }
+        rect.fill(this.getColor(cell))
       })
     })
+  }
+
+  getColor (cell: CellSummary): string {
+    const chosen = this.client.choices.includes(cell.index)
+    const option = [0, 3, 4].includes(cell.state) && !chosen
+    const considering = cell.mouseover && option
+    if (chosen && this.client.gameState === 'decision') {
+      return this.choiceColors[this.client.team]
+    }
+    if (considering && this.client.gameState === 'decision') {
+      return this.considerColors[this.client.team]
+    }
+    return this.colors[cell.state]
   }
 
   update (): void {
@@ -85,16 +119,7 @@ export class Renderer {
     this.manifold.cells.forEach(cell => {
       const rect = this.squares[cell.index]
       if (rect == null) return
-      const color = this.colors[cell.state]
-      rect.fill(color)
-      if (cell.state === 0 && this.client.gameState === 'decision') {
-        const consider = cell.mouseover && this.client.thinking
-        const chosen = this.client.choices.includes(cell.index)
-        if (consider || chosen) {
-          const color = this.colors[this.client.team]
-          rect.fill(color)
-        }
-      }
+      rect.fill(this.getColor(cell))
     })
   }
 

@@ -10,13 +10,16 @@ export class Game {
   manifold = new Manifold()
   teams: Record<number, Team> = {}
   players: Player[] = []
+  stepTime: number
+  token = String(Math.random())
   state = 'decision'
   victoryScore = 3000
   actionSteps = 20
   decisionSteps = 30
   victorySteps = 40
   countdown = 100
-  stepTime: number
+  stepCount = 0
+  roundCount = 0
 
   constructor () {
     this.teams[1] = new Team(1)
@@ -34,16 +37,16 @@ export class Game {
       console.log('connect:', socket.id)
       socket.emit('connected')
       socket.emit('setup', this.manifold.summary)
-      socket.on('click', (index: number) => {
-        const cell = this.manifold.cells[index]
+      socket.on('choices', (choices: number[]) => {
+        if (this.state === 'decision') {
+          const team = this.teams[player.team]
+          team.choices = choices
+        }
+      })
+      socket.on('ready', () => {
         const team = this.teams[player.team]
-        if (cell.state === 0) {
-          team.choices.push(index)
-          // const otherTeam = this.teams[3 - player.team]
-          // const otherTeamCount = this.getPlayerCount(3 - player.team)
-          // if (otherTeamCount === 0) {
-          //   otherTeam.choices = this.getBotChoice()
-          // }
+        if (this.state === 'decision') {
+          team.ready = true
         }
       })
       socket.on('disconnect', () => {
@@ -54,6 +57,7 @@ export class Game {
   }
 
   step (): void {
+    this.stepCount += 1
     if (this.state === 'action') {
       this.actionStep()
     } else if (this.state === 'decision') {
@@ -95,8 +99,15 @@ export class Game {
   decisionStep (): void {
     const choices1 = this.teams[1].choices
     const choices2 = this.teams[2].choices
-    if (this.countdown === 0) {
+    const playerCount1 = this.getPlayerCount(1)
+    const playerCount2 = this.getPlayerCount(2)
+    const playerCount = playerCount1 + playerCount2
+    const ready1 = this.teams[1].ready || playerCount1 === 0
+    const ready2 = this.teams[2].ready || playerCount2 === 0
+    const ready = ready1 && ready2 && playerCount > 0
+    if (this.countdown === 0 || ready) {
       this.state = 'action'
+      this.roundCount += 1
       this.countdown = this.actionSteps
       choices1.forEach(choice => {
         const cell = this.manifold.cells[choice]
@@ -114,9 +125,10 @@ export class Game {
         }
         cell.state = 2
       })
-      return
     }
-    this.countdown = Math.max(0, this.countdown - 1)
+    if (this.teams[1].ready || this.teams[2].ready) {
+      this.countdown = Math.max(0, this.countdown - 1)
+    }
   }
 
   actionStep (): void {
@@ -139,11 +151,13 @@ export class Game {
       return
     }
     this.countdown = Math.max(0, this.countdown - 1)
-    if (this.countdown === 0 || cellCount1 + cellCount2 === 0) {
+    if (this.countdown === 0) {
       this.state = 'decision'
       this.countdown = this.decisionSteps
       this.teams[1].choices = []
       this.teams[2].choices = []
+      this.teams[1].ready = false
+      this.teams[2].ready = false
     }
   }
 
