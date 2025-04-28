@@ -4,7 +4,7 @@ import { CellSummary } from './summaries/cellSummary'
 import { ManifoldSummary } from './summaries/manifoldSummary'
 
 export class Manifold {
-  size = 70
+  size = 50
   cells: Cell[] = []
   grid: Cell[][] = range(this.size).map(() => [])
   summary: ManifoldSummary
@@ -20,26 +20,20 @@ export class Manifold {
       const lagCell = lagManifold.cells[cell.index]
       const count1 = this.countNeighbors(lagCell, lagManifold, 1)
       const count2 = this.countNeighbors(lagCell, lagManifold, 2)
-      const count3 = this.countNeighbors(lagCell, lagManifold, 3)
-      const count4 = this.countNeighbors(lagCell, lagManifold, 4)
-      const countDead = count3 + count4
-      const countAlive = count1 + count2
-      const countTotal = countDead + countAlive
-      if (lagCell.state === 1 || lagCell.state === 2) {
-        const countSame = lagCell.state === 1 ? count1 : count2
-        const survive = [1].includes(countSame) && countDead < 3
-        if (!survive) cell.state = 3
-      }
-      if (lagCell.state === 3) {
-        cell.state = 4
-      }
-      if (lagCell.state === 4) {
-        cell.state = 0
-      }
       if (lagCell.state === 0) {
-        if (count1 > count2 && count1 === 2 && countDead === 0) cell.state = 1
-        if (count2 > count1 && count2 === 2 && countDead === 0) cell.state = 2
+        if (count1 > count2 && [2].includes(count1)) cell.state = 1
+        if (count2 > count1 && [2].includes(count2)) cell.state = 2
+        return
       }
+      if ([0].includes(count1 + count2) && [1, 2].includes(lagCell.state)) {
+        return
+      }
+      if (lagCell.state === 1) cell.state = 3
+      if (lagCell.state === 2) cell.state = 4
+      if (lagCell.state === 3) cell.state = 5
+      if (lagCell.state === 4) cell.state = 6
+      if (lagCell.state === 5) cell.state = 0
+      if (lagCell.state === 6) cell.state = 0
     })
     this.summary = this.summarize()
   }
