@@ -29,11 +29,9 @@ export class Manifold {
         return
       }
       if (lagCell.state === 1) cell.state = 3
-      if (lagCell.state === 2) cell.state = 4
-      if (lagCell.state === 3) cell.state = 5
-      if (lagCell.state === 4) cell.state = 6
-      if (lagCell.state === 5) cell.state = 0
-      if (lagCell.state === 6) cell.state = 0
+      if (lagCell.state === 2) cell.state = 3
+      if (lagCell.state === 3) cell.state = 4
+      if (lagCell.state === 4) cell.state = 0
     })
     this.summary = this.summarize()
   }
