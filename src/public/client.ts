@@ -2,9 +2,11 @@ import io from 'socket.io-client'
 import { Renderer } from './renderer'
 import { ManifoldSummary } from '../summaries/manifoldSummary'
 import { GameSummary } from '../summaries/gameSummary'
+import { Cursor } from './cursor'
 
 export class Client {
   socket = io()
+  cursor = new Cursor()
   manifold?: ManifoldSummary
   renderer: Renderer
   gameState = 'decision'
@@ -12,6 +14,10 @@ export class Client {
   team = 1
   ready1 = false
   ready2 = false
+  reserve1 = 0
+  reserve2 = 0
+  cells1 = 0
+  cells2 = 0
   score1 = 0
   score2 = 0
   victoryScore = 3000
@@ -21,6 +27,7 @@ export class Client {
   thinking = true
   stepCount = 0
   roundCount = 0
+  maxCount = 1
   token = ''
 
   constructor () {
@@ -57,6 +64,10 @@ export class Client {
     this.team = gameSummary.team
     this.ready1 = gameSummary.ready1
     this.ready2 = gameSummary.ready2
+    this.reserve1 = gameSummary.reserve1
+    this.reserve2 = gameSummary.reserve2
+    this.cells1 = gameSummary.cells1
+    this.cells2 = gameSummary.cells2
     this.score1 = gameSummary.score1
     this.score2 = gameSummary.score2
     this.victoryScore = gameSummary.victoryScore
@@ -65,6 +76,13 @@ export class Client {
     this.countdown = gameSummary.countdown
     this.thinking = this.team === 1 ? !gameSummary.ready1 : !gameSummary.ready2
     this.gameState = gameSummary.gameState
+    this.maxCount = gameSummary.maxCount
+    this.cursor.setTeam(this.team)
+    this.cursor.setTime(this.countdown / this.maxCount)
+    const showButton1 = this.gameState === 'decision' && this.team === 1 && !this.ready1
+    const showButton2 = this.gameState === 'decision' && this.team === 2 && !this.ready2
+    this.renderer.readyButton1.style.display = showButton1 ? 'block' : 'none'
+    this.renderer.readyButton2.style.display = showButton2 ? 'block' : 'none'
     gameSummary.cellStates.forEach((state, i) => {
       if (this.manifold == null) return
       this.manifold.cells[i].state = state

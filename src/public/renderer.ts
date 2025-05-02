@@ -14,8 +14,14 @@ export class Renderer {
   titleDiv2: HTMLDivElement
   scoreDiv1: HTMLDivElement
   scoreDiv2: HTMLDivElement
+  cellDiv1: HTMLDivElement
+  cellDiv2: HTMLDivElement
+  reserveDiv1: HTMLDivElement
+  reserveDiv2: HTMLDivElement
   countdownDiv1: HTMLDivElement
   countdownDiv2: HTMLDivElement
+  readyButton1: HTMLDivElement
+  readyButton2: HTMLDivElement
 
   considerColors = [
     'hsl(0, 0%, 0%)',
@@ -34,7 +40,8 @@ export class Renderer {
     'hsl(220, 100%, 50%)',
     'hsl(120, 100%, 30%)',
     'hsl(180, 100%, 20%)',
-    'hsl(180, 100%, 15%)'
+    'hsl(180, 100%, 10%)',
+    'hsl(0, 100%, 15%)'
   ]
 
   constructor (client: Client) {
@@ -48,10 +55,22 @@ export class Renderer {
     this.titleDiv2 = document.getElementById('titleDiv2') as HTMLDivElement
     this.scoreDiv1 = document.getElementById('scoreDiv1') as HTMLDivElement
     this.scoreDiv2 = document.getElementById('scoreDiv2') as HTMLDivElement
+    this.cellDiv1 = document.getElementById('cellDiv1') as HTMLDivElement
+    this.cellDiv2 = document.getElementById('cellDiv2') as HTMLDivElement
+    this.reserveDiv1 = document.getElementById('reserveDiv1') as HTMLDivElement
+    this.reserveDiv2 = document.getElementById('reserveDiv2') as HTMLDivElement
     this.countdownDiv1 = document.getElementById('countdownDiv1') as HTMLDivElement
     this.countdownDiv2 = document.getElementById('countdownDiv2') as HTMLDivElement
+    this.readyButton1 = document.getElementById('readyButton1') as HTMLDivElement
+    this.readyButton2 = document.getElementById('readyButton2') as HTMLDivElement
     this.teamDiv1.style.color = this.choiceColors[1]
     this.teamDiv2.style.color = this.choiceColors[2]
+    this.readyButton1.style.color = this.choiceColors[1]
+    this.readyButton2.style.color = this.choiceColors[2]
+    this.readyButton1.style.outlineColor = this.choiceColors[1]
+    this.readyButton2.style.outlineColor = this.choiceColors[2]
+    this.readyButton1.onclick = () => { this.client.socket.emit('ready') }
+    this.readyButton2.onclick = () => { this.client.socket.emit('ready') }
   }
 
   setup (): void {
@@ -74,18 +93,20 @@ export class Renderer {
           if (chosen) {
             this.client.choices = this.client.choices.filter(i => i !== cell.index)
           } else {
-            this.client.choices.push(cell.index)
+            const reserve = this.client.team === 1 ? this.client.reserve1 : this.client.reserve2
+            if (this.client.choices.length < reserve) {
+              this.client.choices.push(cell.index)
+            }
           }
-          const chosen2 = this.client.choices.includes(cell.index)
-          console.log('chosen2', chosen2)
-          const color = this.getColor(cell)
-          console.log('click', color)
           rect.fill(this.getColor(cell))
           this.client.socket.emit('choices', this.client.choices)
         }
       })
       rect.mouseenter(event => {
-        cell.mouseover = true
+        const reserve = this.client.team === 1 ? this.client.reserve1 : this.client.reserve2
+        if (this.client.choices.length < reserve) {
+          cell.mouseover = true
+        }
         rect.fill(this.getColor(cell))
       })
       rect.mouseleave(event => {
@@ -126,6 +147,16 @@ export class Renderer {
   updateInfo (): void {
     this.scoreDiv1.innerHTML = `Score: ${this.client.score1} / ${this.client.victoryScore}`
     this.scoreDiv2.innerHTML = `Score: ${this.client.score2} / ${this.client.victoryScore}`
+    this.cellDiv1.innerHTML = `Cells: ${this.client.cells1}`
+    this.cellDiv2.innerHTML = `Cells: ${this.client.cells2}`
+    const R1 = this.client.reserve1
+    const R2 = this.client.reserve2
+    const C = this.client.choices.length
+    const team = this.client.team
+    const reserve1 = team === 1 ? R1 - C : R1
+    const reserve2 = team === 2 ? R2 - C : R2
+    this.reserveDiv1.innerHTML = `Reserve: ${reserve1}`
+    this.reserveDiv2.innerHTML = `Reserve: ${reserve2}`
     this.countdownDiv1.innerHTML = `Countdown: ${this.client.countdown}`
     this.countdownDiv2.innerHTML = `Countdown: ${this.client.countdown}`
     if (this.client.gameState === 'action') {
