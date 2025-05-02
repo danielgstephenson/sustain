@@ -16,7 +16,7 @@ export class Game {
   victoryScore = 100
   actionSteps = 5
   decisionSteps = 60
-  victorySteps = 40
+  victorySteps = 60
   countdown = 100
   stepCount = 0
   roundCount = 0
