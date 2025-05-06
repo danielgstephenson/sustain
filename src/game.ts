@@ -5,6 +5,18 @@ import { Server } from './server'
 import { GameSummary } from './summaries/gameSummary'
 import { Team } from './team'
 
+// Make the map asymmetric
+// Make selection color clearer for blue
+// Timing
+//  One step every 2 seconds
+//  Timer = 5 steps = 10 seconds
+// No pausing
+//  The game always takes steps
+//  You can always plan placements from reserve
+//  When the timer runs out placements activate
+// Make a selection indicator for the other player
+//  It should remain visible until the next decision phase
+
 export class Game {
   server = new Server()
   manifold = new Manifold()

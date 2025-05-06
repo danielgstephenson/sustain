@@ -23,15 +23,9 @@ export class Renderer {
   readyButton1: HTMLDivElement
   readyButton2: HTMLDivElement
 
-  considerColors = [
-    'hsl(0, 0%, 0%)',
-    'hsl(220, 80%, 50%)',
-    'hsl(120, 40%, 50%)'
-  ]
-
   choiceColors = [
     'hsl(0, 0%, 0%)',
-    'hsl(220, 80%, 50%)',
+    'hsl(195, 100%, 50%)',
     'hsl(120, 40%, 50%)'
   ]
 
@@ -120,11 +114,9 @@ export class Renderer {
     const chosen = this.client.choices.includes(cell.index)
     const option = [0, 3, 4].includes(cell.state) && !chosen
     const considering = cell.mouseover && option
-    if (chosen && this.client.gameState === 'decision') {
+    const choice = chosen || considering
+    if (choice && this.client.gameState === 'decision') {
       return this.choiceColors[this.client.team]
-    }
-    if (considering && this.client.gameState === 'decision') {
-      return this.considerColors[this.client.team]
     }
     return this.colors[cell.state]
   }

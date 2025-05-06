@@ -95,17 +95,15 @@ export class Manifold {
     })
     range(50).forEach(_ => {
       const y = choose(options)
-      const x1 = choose(options)
-      const x2 = this.size - 1 - x1
-      this.grid[x1][y].state = 5
-      this.grid[x2][y].state = 5
+      const x = choose(options)
+      this.grid[x][y].state = 5
     })
     range(2).forEach(_ => {
       const lagManifold = this.summarize()
       this.cells.forEach(cell => {
         const lagCell = lagManifold.cells[cell.index]
         const count5 = this.countNeighbors(lagCell, lagManifold, 5)
-        if (lagCell.state === 5 && count5 < 2) {
+        if (lagCell.state === 5 && count5 < 1) {
           cell.state = 0
         }
       })
