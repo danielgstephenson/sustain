@@ -24,7 +24,6 @@ export class Cursor {
     this.circle.fill({ opacity: 0 })
     this.circle.stroke({ width: 7, color: 'white', opacity: 0.3 })
     document.addEventListener('mousemove', (event) => {
-      console.log('mouseMove')
       const x = event.clientX
       const y = event.clientY
       this.cursorDiv.style.transform = `translate3d(${x}px,${y}px,0)`

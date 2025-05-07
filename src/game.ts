@@ -5,43 +5,38 @@ import { Server } from './server'
 import { GameSummary } from './summaries/gameSummary'
 import { Team } from './team'
 
-// Make the map asymmetric
-// Make selection color clearer for blue
-// Timing
-//  One step every 2 seconds
-//  Timer = 5 steps = 10 seconds
-// No pausing
-//  The game always takes steps
-//  You can always plan placements from reserve
-//  When the timer runs out placements activate
-// Make a selection indicator for the other player
-//  It should remain visible until the next decision phase
+// The map is now asymmetric
+// The selection color is clearer
+// The other player's selecion is inidicated by a white outline
+// Time is needed for placement
+//  Otherwise cell constantly grow over placement
+//  This makes placing near active cells impractical
+//  This makes it very difficult to disrupt active cells
+//  This leads to run away winners
 
 export class Game {
   server = new Server()
   manifold = new Manifold()
   teams: Record<number, Team> = {}
   players: Player[] = []
-  stepTime: number
   token = String(Math.random())
+  timeScale: number
+  decisionCount = 0
+  victoryScore = 50
+  stepInterval = 0.25
   state = 'decision'
-  victoryScore = 100
+  countdown = 30
+  maxCountdown = 30
+  decisionSteps = 30
   actionSteps = 5
-  decisionSteps = 60
-  victorySteps = 60
-  countdown = 100
-  stepCount = 0
-  roundCount = 0
-  maxCount = 1
+  victorySteps = 15
 
   constructor () {
     this.teams[1] = new Team(1)
     this.teams[2] = new Team(2)
     this.setupIo()
-    this.stepTime = 0.5 / this.server.config.timeScale
-    this.countdown = this.decisionSteps
-    this.maxCount = this.decisionSteps
-    setInterval(() => this.step(), this.stepTime * 1000)
+    this.timeScale = this.server.config.timeScale
+    setInterval(() => this.step(), 1000 * this.stepInterval / this.timeScale)
   }
 
   setupIo (): void {
@@ -71,89 +66,93 @@ export class Game {
   }
 
   step (): void {
-    this.stepCount += 1
     if (this.state === 'action') {
-      this.actionStep()
+      this.action()
     } else if (this.state === 'decision') {
-      this.decisionStep()
+      this.decision()
     } else if (this.state === 'victory') {
-      this.victoryStep()
+      this.victory()
     }
-    const summary1 = new GameSummary(this, 1)
-    const summary2 = new GameSummary(this, 2)
+    const summary1 = new GameSummary(1, this)
+    const summary2 = new GameSummary(2, this)
     this.players.forEach(player => {
       const summary = player.team === 1 ? summary1 : summary2
       player.socket.emit('step', summary)
     })
   }
 
-  victoryStep (): void {
+  action (): void {
     this.countdown = Math.max(0, this.countdown - 1)
+    this.manifold.step()
     if (this.countdown === 0) {
-      this.manifold = new Manifold()
-      this.manifold.summary = this.manifold.summarize()
-      this.teams[1] = new Team(1)
-      this.teams[2] = new Team(2)
-      this.players.forEach(player => {
-        player.team = 0
-      })
-      this.players.forEach(player => {
-        const smallTeam = this.getSmallTeam()
-        console.log('smallTeam', smallTeam)
-        player.team = smallTeam
-      })
-      this.countdown = this.decisionSteps
-      this.maxCount = this.decisionSteps
       this.state = 'decision'
-      this.players.forEach(player => {
-        player.socket.emit('setup', this.manifold.summary)
-      })
+      this.countdown = this.decisionSteps
+      this.maxCountdown = this.decisionSteps
     }
+    this.score()
   }
 
-  decisionStep (): void {
-    const choices1 = this.teams[1].choices
-    const choices2 = this.teams[2].choices
+  decision (): void {
+    if (this.teams[1].ready || this.teams[2].ready) {
+      this.countdown = Math.max(0, this.countdown - 1)
+    }
     const playerCount1 = this.getPlayerCount(1)
     const playerCount2 = this.getPlayerCount(2)
     const playerCount = playerCount1 + playerCount2
     const ready1 = this.teams[1].ready || playerCount1 === 0
     const ready2 = this.teams[2].ready || playerCount2 === 0
     const ready = ready1 && ready2 && playerCount > 0
-    if (this.countdown === 0 || ready) {
+    if (ready || this.countdown === 0) {
+      this.deploy()
+      this.teams[1].ready = false
+      this.teams[2].ready = false
       this.state = 'action'
-      this.roundCount += 1
       this.countdown = this.actionSteps
-      this.maxCount = this.actionSteps
-      choices1.forEach(choice => {
-        const cell = this.manifold.cells[choice]
-        if (choices2.includes(choice)) {
-          cell.state = 5
-          return
-        }
-        cell.state = 1
-      })
-      choices2.forEach(choice => {
-        const cell = this.manifold.cells[choice]
-        if (choices1.includes(choice)) {
-          cell.state = 5
-          return
-        }
-        cell.state = 2
-      })
-      Object.values(this.teams).forEach(team => {
-        team.reserve = team.reserve - team.choices.length
-        team.choices = []
-        team.ready = false
-      })
-    }
-    if (this.teams[1].ready || this.teams[2].ready) {
-      this.countdown = Math.max(0, this.countdown - 1)
+      this.maxCountdown = this.actionSteps
     }
   }
 
-  actionStep (): void {
-    this.manifold.step()
+  victory (): void {
+    this.countdown = Math.max(0, this.countdown - 1)
+    if (this.countdown === 0) {
+      this.restart()
+    }
+  }
+
+  deploy (): void {
+    this.decisionCount += 1
+    const choices1 = this.teams[1].choices
+    const choices2 = this.teams[2].choices
+    this.teams[1].oldChoices = [...choices1]
+    this.teams[2].oldChoices = [...choices2]
+    this.countdown = this.decisionSteps
+    this.maxCountdown = this.actionSteps
+    choices1.forEach(choice => {
+      const cell = this.manifold.cells[choice]
+      if (choices2.includes(choice)) {
+        cell.state = 5
+        return
+      }
+      cell.state = 1
+    })
+    choices2.forEach(choice => {
+      const cell = this.manifold.cells[choice]
+      if (choices1.includes(choice)) {
+        cell.state = 5
+        return
+      }
+      cell.state = 2
+    })
+    Object.values(this.teams).forEach(team => {
+      team.reserve = team.reserve - team.choices.length
+      team.choices = []
+    })
+    Object.values(this.teams).forEach(team => {
+      team.reserve = team.reserve + 1
+    })
+  }
+
+  score (): void {
     const cellCount1 = this.manifold.cells.filter(c => c.state === 1).length
     const cellCount2 = this.manifold.cells.filter(c => c.state === 2).length
     this.teams[1].cells = cellCount1
@@ -168,27 +167,36 @@ export class Game {
     }
     const score1 = this.teams[1].score
     const score2 = this.teams[2].score
-    if (score1 > score2 && score1 > this.victoryScore) {
+    if (score1 > score2 && score1 >= this.victoryScore) {
       this.teams[1].victory = true
     }
-    if (score2 > score1 && score2 > this.victoryScore) {
+    if (score2 > score1 && score2 >= this.victoryScore) {
       this.teams[2].victory = true
     }
     if (this.teams[1].victory || this.teams[2].victory) {
       this.state = 'victory'
       this.countdown = this.victorySteps
-      this.maxCount = this.victorySteps
-      return
     }
-    this.countdown = Math.max(0, this.countdown - 1)
-    if (this.countdown === 0) {
-      this.state = 'decision'
-      this.countdown = this.decisionSteps
-      this.maxCount = this.decisionSteps
-      Object.values(this.teams).forEach(team => {
-        team.reserve = team.reserve + 1
-      })
-    }
+  }
+
+  restart (): void {
+    this.manifold = new Manifold()
+    this.manifold.summary = this.manifold.summarize()
+    this.teams[1] = new Team(1)
+    this.teams[2] = new Team(2)
+    this.players.forEach(player => {
+      player.team = 0
+    })
+    this.players.forEach(player => {
+      const smallTeam = this.getSmallTeam()
+      player.team = smallTeam
+    })
+    this.countdown = this.decisionSteps
+    this.decisionCount = 0
+    this.state = 'decision'
+    this.players.forEach(player => {
+      player.socket.emit('setup', this.manifold.summary)
+    })
   }
 
   getSmallTeam (): number {
