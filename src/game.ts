@@ -28,6 +28,14 @@ export class Game {
   actionSteps = 5
   victorySteps = 15
 
+  // Make red shapes more contiguous
+  // Larger Map Size?
+  // More red units?
+  // Red unit Growth?
+  // Red unit Destruction?
+  // Use ring color to indicate score (green, grey, blue)
+  // When all red are destroyed highest score wins
+
   constructor () {
     this.teams[1] = new Team(1)
     this.teams[2] = new Team(2)
