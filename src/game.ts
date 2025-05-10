@@ -9,10 +9,7 @@ import { Team } from './team'
 // The selection color is clearer
 // The other player's selecion is inidicated by a white outline
 // Time is needed for placement
-//  Otherwise cell constantly grow over placement
-//  This makes placing near active cells impractical
-//  This makes it very difficult to disrupt active cells
-//  This leads to run away winners
+//  Otherwise it is not practical to place multiple units simultaneously
 
 export class Game {
   server = new Server()
@@ -21,13 +18,13 @@ export class Game {
   players: Player[] = []
   token = String(Math.random())
   timeScale: number
+  countdown: number
+  maxCountdown: number
   decisionCount = 0
   victoryScore = 50
-  stepInterval = 0.25
+  stepInterval = 0.5
   state = 'decision'
-  countdown = 30
-  maxCountdown = 30
-  decisionSteps = 30
+  decisionSteps = 15
   actionSteps = 5
   victorySteps = 15
 
@@ -36,6 +33,8 @@ export class Game {
     this.teams[2] = new Team(2)
     this.setupIo()
     this.timeScale = this.server.config.timeScale
+    this.maxCountdown = this.decisionSteps
+    this.countdown = this.maxCountdown
     setInterval(() => this.step(), 1000 * this.stepInterval / this.timeScale)
   }
 
