@@ -21,7 +21,7 @@ export class Game {
   countdown: number
   maxCountdown: number
   decisionCount = 0
-  victoryScore = 50
+  victoryScore = 9999 // 50
   stepInterval = 0.5
   state = 'decision'
   decisionSteps = 15
@@ -92,6 +92,7 @@ export class Game {
     this.countdown = Math.max(0, this.countdown - 1)
     this.manifold.step()
     if (this.countdown === 0) {
+      this.manifold.decay()
       this.state = 'decision'
       this.countdown = this.decisionSteps
       this.maxCountdown = this.decisionSteps
@@ -155,7 +156,7 @@ export class Game {
       team.choices = []
     })
     Object.values(this.teams).forEach(team => {
-      team.reserve = team.reserve + 1
+      team.reserve = team.reserve + 2
     })
   }
 

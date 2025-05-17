@@ -4,7 +4,7 @@ import { CellSummary } from './summaries/cellSummary'
 import { ManifoldSummary } from './summaries/manifoldSummary'
 
 export class Manifold {
-  size = 34
+  size = 30
   cells: Cell[] = []
   grid: Cell[][] = range(this.size).map(() => [])
   summary: ManifoldSummary
@@ -31,12 +31,13 @@ export class Manifold {
           cell.state = 3
           return
         }
-        if ([0].includes(count1 + count2)) {
+        const otherCount = lagCell.state === 1 ? count2 : count1
+        const sameCount = lagCell.state === 1 ? count1 : count2
+        if (otherCount > 0 && otherCount >= sameCount) {
+          cell.state = 3
           return
         }
-        const otherCount = lagCell.state === 1 ? count2 : count1
-        if (otherCount > 1) {
-          cell.state = 3
+        if (sameCount === 0) {
           return
         }
       }
@@ -44,6 +45,28 @@ export class Manifold {
       if (lagCell.state === 2) cell.state = 3
       if (lagCell.state === 3) cell.state = 4
       if (lagCell.state === 4) cell.state = 0
+      if (lagCell.state === 5) {
+        if (count1 + count2 > 0) cell.state = 3
+      }
+    })
+    this.summary = this.summarize()
+  }
+
+  decay (): void {
+    const lagManifold = this.summarize()
+    const totalCells = lagManifold.cells.length
+    const totalRed = lagManifold.cells.filter(c => c.state === 5).length
+    const many = totalRed > 0.15 * totalCells
+    const grow = !many
+    this.cells.forEach(cell => {
+      const lagCell = lagManifold.cells[cell.index]
+      const count5 = this.countNeighbors(lagCell, lagManifold, 5)
+      if (lagCell.state === 0 && grow) {
+        if ([3].includes(count5)) cell.state = 5
+      }
+      if (lagCell.state === 5) {
+        if (count5 < 2 || count5 > 4) cell.state = 0
+      }
     })
     this.summary = this.summarize()
   }
@@ -86,37 +109,16 @@ export class Manifold {
     const a = Math.floor(0.2 * this.size)
     const b = Math.floor(0.8 * this.size)
     const options = range(a, b)
-    range(0).forEach(_ => {
-      const y = choose(options)
-      const x1 = choose(options)
-      const x2 = this.size - 1 - x1
-      this.grid[x1][y].state = 1
-      this.grid[x2][y].state = 2
-    })
-    range(50).forEach(_ => {
+    const totalCells = this.cells.length
+    range(200).forEach(_ => {
+      const totalRed = this.cells.filter(c => c.state === 5).length
+      if (totalRed > 0.1 * totalCells) return
       const y = choose(options)
       const x = choose(options)
       this.grid[x][y].state = 5
     })
-    range(2).forEach(_ => {
-      const lagManifold = this.summarize()
-      this.cells.forEach(cell => {
-        const lagCell = lagManifold.cells[cell.index]
-        const count5 = this.countNeighbors(lagCell, lagManifold, 5)
-        if (lagCell.state === 5 && count5 < 1) {
-          cell.state = 0
-        }
-      })
-    })
-    const lagManifold = this.summarize()
-    this.cells.forEach(cell => {
-      const lagCell = lagManifold.cells[cell.index]
-      const count1 = this.countNeighbors(lagCell, lagManifold, 1)
-      const count2 = this.countNeighbors(lagCell, lagManifold, 2)
-      const count5 = this.countNeighbors(lagCell, lagManifold, 5)
-      if ([1, 2].includes(lagCell.state) && count1 + count2 + count5 > 0) {
-        cell.state = 0
-      }
+    range(200).forEach(_ => {
+      this.decay()
     })
   }
 
