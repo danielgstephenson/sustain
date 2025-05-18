@@ -20,10 +20,15 @@ export class Manifold {
       const lagCell = lagManifold.cells[cell.index]
       const count1 = this.countNeighbors(lagCell, lagManifold, 1)
       const count2 = this.countNeighbors(lagCell, lagManifold, 2)
+      const count3 = this.countNeighbors(lagCell, lagManifold, 3)
+      const count4 = this.countNeighbors(lagCell, lagManifold, 4)
       const count5 = this.countNeighbors(lagCell, lagManifold, 5)
+      const activeCount = count1 + count2
+      const decayCount = count3 + count4
       if (lagCell.state === 0) {
-        if (count1 > count2 && [2].includes(count1)) cell.state = 1
-        if (count2 > count1 && [2].includes(count2)) cell.state = 2
+        if (count1 > count2 && activeCount === 2) cell.state = 1
+        if (count2 > count1 && activeCount === 2) cell.state = 2
+        if (count5 > 4) cell.state = 5
         return
       }
       if ([1, 2].includes(lagCell.state)) {
@@ -32,21 +37,26 @@ export class Manifold {
           return
         }
         const otherCount = lagCell.state === 1 ? count2 : count1
-        const sameCount = lagCell.state === 1 ? count1 : count2
-        if (otherCount > 0 && otherCount >= sameCount) {
-          cell.state = 3
+        if (otherCount > 0) {
+          cell.state = 5
           return
         }
-        if (sameCount === 0) {
+        if (activeCount === 0 && decayCount > 0) {
           return
         }
+        cell.state = 3
       }
-      if (lagCell.state === 1) cell.state = 3
-      if (lagCell.state === 2) cell.state = 3
-      if (lagCell.state === 3) cell.state = 4
-      if (lagCell.state === 4) cell.state = 0
+      if (lagCell.state === 3) {
+        cell.state = 4
+        return
+      }
+      if (lagCell.state === 4) {
+        cell.state = 0
+        return
+      }
       if (lagCell.state === 5) {
         if (count1 + count2 > 0) cell.state = 3
+        if (count5 < 1) cell.state = 3
       }
     })
     this.summary = this.summarize()
@@ -62,10 +72,10 @@ export class Manifold {
       const lagCell = lagManifold.cells[cell.index]
       const count5 = this.countNeighbors(lagCell, lagManifold, 5)
       if (lagCell.state === 0 && grow) {
-        if ([3].includes(count5)) cell.state = 5
+        if (count5 > 4) cell.state = 5
       }
       if (lagCell.state === 5) {
-        if (count5 < 2 || count5 > 4) cell.state = 0
+        if (count5 === 0) cell.state = 0
       }
     })
     this.summary = this.summarize()

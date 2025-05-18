@@ -3,7 +3,7 @@ export class Team {
   oldChoices: number[] = []
   score = 0
   cells = 0
-  reserve = 4
+  reserve = 2
   victory = false
   ready = false
   index: number

@@ -123,7 +123,7 @@ export class Renderer {
 
   getColor (cell: CellSummary): string {
     const chosen = this.client.choices.includes(cell.index)
-    const option = [0, 3, 4].includes(cell.state) && !chosen
+    const option = [0, 1, 2, 3, 4].includes(cell.state) && !chosen
     const considering = cell.mouseover && option
     const choice = chosen || considering
     if (choice && this.game.state === 'decision') {
