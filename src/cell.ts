@@ -4,6 +4,7 @@ export class Cell {
   x: number
   y: number
   state = 0
+  distance = 0
 
   constructor (index: number, x: number, y: number) {
     this.index = index

@@ -37,7 +37,8 @@ export class Renderer {
     'hsl(120, 100%, 30%)',
     'hsl(180, 100%, 20%)',
     'hsl(180, 100%, 10%)',
-    'hsl(0, 100%, 15%)'
+    'hsl(0, 100%, 15%)',
+    'hsl(0, 100%, 30%)'
   ]
 
   constructor (client: Client) {
@@ -95,7 +96,9 @@ export class Renderer {
           } else {
             const reserve = this.game.team === 1 ? team1.reserve : team2.reserve
             if (this.client.choices.length < reserve) {
-              this.client.choices.push(cell.index)
+              if ([0, 1, 2, 3, 4].includes(cell.state)) {
+                this.client.choices.push(cell.index)
+              }
             }
           }
           rect.fill(this.getColor(cell))
@@ -164,8 +167,8 @@ export class Renderer {
     const team1 = this.game.teams[1]
     const team2 = this.game.teams[2]
     const team = this.game.team
-    this.scoreDiv1.innerHTML = `Score: ${team1.score} / ${this.game.victoryScore}`
-    this.scoreDiv2.innerHTML = `Score: ${team2.score} / ${this.game.victoryScore}`
+    this.scoreDiv1.innerHTML = `Score: ${team1.score}`
+    this.scoreDiv2.innerHTML = `Score: ${team2.score}`
     this.cellDiv1.innerHTML = `Cells: ${team1.cells}`
     this.cellDiv2.innerHTML = `Cells: ${team2.cells}`
     const R1 = team1.reserve

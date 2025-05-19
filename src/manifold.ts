@@ -4,7 +4,7 @@ import { CellSummary } from './summaries/cellSummary'
 import { ManifoldSummary } from './summaries/manifoldSummary'
 
 export class Manifold {
-  size = 30
+  size = 34
   cells: Cell[] = []
   grid: Cell[][] = range(this.size).map(() => [])
   summary: ManifoldSummary
@@ -25,20 +25,21 @@ export class Manifold {
       const count5 = this.countNeighbors(lagCell, lagManifold, 5)
       const activeCount = count1 + count2
       const decayCount = count3 + count4
-      if (lagCell.state === 0) {
-        if (count1 > count2 && activeCount === 2) cell.state = 1
-        if (count2 > count1 && activeCount === 2) cell.state = 2
-        if (count5 > 4) cell.state = 5
+      if (lagCell.state === 0 && activeCount === 2) {
+        if (count1 > count2) {
+          cell.state = 1
+          return
+        }
+        if (count2 > count1) {
+          cell.state = 2
+          return
+        }
         return
       }
       if ([1, 2].includes(lagCell.state)) {
-        if (count5 > 0) {
-          cell.state = 3
-          return
-        }
         const otherCount = lagCell.state === 1 ? count2 : count1
         if (otherCount > 0) {
-          cell.state = 5
+          cell.state = 0
           return
         }
         if (activeCount === 0 && decayCount > 0) {
@@ -56,7 +57,7 @@ export class Manifold {
       }
       if (lagCell.state === 5) {
         if (count1 + count2 > 0) cell.state = 3
-        if (count5 < 1) cell.state = 3
+        if (count5 === 0) cell.state = 3
       }
     })
     this.summary = this.summarize()
@@ -64,19 +65,25 @@ export class Manifold {
 
   decay (): void {
     const lagManifold = this.summarize()
-    const totalCells = lagManifold.cells.length
-    const totalRed = lagManifold.cells.filter(c => c.state === 5).length
-    const many = totalRed > 0.15 * totalCells
-    const grow = !many
     this.cells.forEach(cell => {
       const lagCell = lagManifold.cells[cell.index]
       const count5 = this.countNeighbors(lagCell, lagManifold, 5)
-      if (lagCell.state === 0 && grow) {
-        if (count5 > 4) cell.state = 5
+      if (lagCell.state === 5 && count5 === 0) {
+        cell.state = 0
       }
-      if (lagCell.state === 5) {
-        if (count5 === 0) cell.state = 0
-      }
+    })
+    const totalCells = lagManifold.cells.length
+    const totalRed = lagManifold.cells.filter(c => c.state === 5).length
+    if (totalRed > 0.2 * totalCells) return
+    const emptyCells = this.cells.filter(cell => cell.state === 0)
+    const growCells = emptyCells.filter(cell => {
+      const lagCell = lagManifold.cells[cell.index]
+      const count5 = this.countNeighbors(lagCell, lagManifold, 5)
+      return count5 > 1
+    })
+    const maxDistance = Math.max(...growCells.map(c => c.distance))
+    growCells.forEach(cell => {
+      if (cell.distance === maxDistance) cell.state = 5
     })
     this.summary = this.summarize()
   }
@@ -116,18 +123,22 @@ export class Manifold {
   }
 
   initialize (): void {
-    const a = Math.floor(0.2 * this.size)
-    const b = Math.floor(0.8 * this.size)
-    const options = range(a, b)
-    const totalCells = this.cells.length
-    range(200).forEach(_ => {
-      const totalRed = this.cells.filter(c => c.state === 5).length
-      if (totalRed > 0.1 * totalCells) return
-      const y = choose(options)
-      const x = choose(options)
-      this.grid[x][y].state = 5
+    const centerCells = range(3).map(_ => choose(this.cells))
+    centerCells.forEach(cell => { cell.state = 6 })
+    this.cells.forEach(cell => {
+      const distances = centerCells.map(centerCell => {
+        const dx = cell.x - centerCell.x
+        const dy = cell.y - centerCell.y
+        return Math.sqrt(dx * dx + dy * dy)
+      })
+      cell.distance = Math.min(...distances)
     })
-    range(200).forEach(_ => {
+    const options = this.cells.filter(c => c.distance < 0.2 * this.size)
+    range(300).forEach(_ => {
+      const cell = choose(options)
+      if (cell.state === 0) cell.state = 5
+    })
+    range(2).forEach(_ => {
       this.decay()
     })
   }

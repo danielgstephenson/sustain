@@ -5,11 +5,15 @@ import { Server } from './server'
 import { GameSummary } from './summaries/gameSummary'
 import { Team } from './team'
 
-// The map is now asymmetric
-// The selection color is clearer
-// The other player's selecion is inidicated by a white outline
-// Time is needed for placement
-//  Otherwise it is not practical to place multiple units simultaneously
+// DONE:
+// Red shapes more contiguous
+// More red units
+// Red unit Growth
+// Red unit Destruction
+
+// TO DO:
+// Use ring color to indicate score (green, grey, blue)
+// When all red are destroyed highest score wins
 
 export class Game {
   server = new Server()
@@ -26,16 +30,8 @@ export class Game {
   stepInterval = 0.5
   state = 'decision'
   decisionSteps = 15
-  actionSteps = 5
+  actionSteps = 4
   victorySteps = 15
-
-  // Make red shapes more contiguous
-  // Larger Map Size?
-  // More red units?
-  // Red unit Growth?
-  // Red unit Destruction?
-  // Use ring color to indicate score (green, grey, blue)
-  // When all red are destroyed highest score wins
 
   constructor () {
     this.teams[1] = new Team(1)
@@ -96,6 +92,7 @@ export class Game {
       this.state = 'decision'
       this.countdown = this.decisionSteps
       this.maxCountdown = this.decisionSteps
+      this.manifold.decay()
     }
     this.score()
   }
@@ -156,7 +153,7 @@ export class Game {
       team.choices = []
     })
     Object.values(this.teams).forEach(team => {
-      team.reserve = Math.min(this.maxReserve, team.reserve + 1)
+      team.reserve = this.maxReserve
     })
   }
 
