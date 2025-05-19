@@ -13,8 +13,6 @@ export class Renderer {
   teamDiv2: HTMLDivElement
   titleDiv1: HTMLDivElement
   titleDiv2: HTMLDivElement
-  scoreDiv1: HTMLDivElement
-  scoreDiv2: HTMLDivElement
   cellDiv1: HTMLDivElement
   cellDiv2: HTMLDivElement
   reserveDiv1: HTMLDivElement
@@ -51,8 +49,6 @@ export class Renderer {
     this.teamDiv2 = document.getElementById('teamDiv2') as HTMLDivElement
     this.titleDiv1 = document.getElementById('titleDiv1') as HTMLDivElement
     this.titleDiv2 = document.getElementById('titleDiv2') as HTMLDivElement
-    this.scoreDiv1 = document.getElementById('scoreDiv1') as HTMLDivElement
-    this.scoreDiv2 = document.getElementById('scoreDiv2') as HTMLDivElement
     this.cellDiv1 = document.getElementById('cellDiv1') as HTMLDivElement
     this.cellDiv2 = document.getElementById('cellDiv2') as HTMLDivElement
     this.reserveDiv1 = document.getElementById('reserveDiv1') as HTMLDivElement
@@ -167,10 +163,8 @@ export class Renderer {
     const team1 = this.game.teams[1]
     const team2 = this.game.teams[2]
     const team = this.game.team
-    this.scoreDiv1.innerHTML = `Score: ${team1.score}`
-    this.scoreDiv2.innerHTML = `Score: ${team2.score}`
-    this.cellDiv1.innerHTML = `Cells: ${team1.cells}`
-    this.cellDiv2.innerHTML = `Cells: ${team2.cells}`
+    this.cellDiv1.innerHTML = `Cells: ${team1.cellCount}`
+    this.cellDiv2.innerHTML = `Cells: ${team2.cellCount}`
     const R1 = team1.reserve
     const R2 = team2.reserve
     const C = this.client.choices.length

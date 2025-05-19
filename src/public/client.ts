@@ -43,7 +43,7 @@ export class Client {
     }
     this.game = gameSummary
     this.cursor.setTeam(this.game.team)
-    this.cursor.setTime(this.game.countdown / this.game.maxCountdown)
+    this.cursor.onStep(this.game)
     this.renderer.readyButton1.style.display = 'none'
     this.renderer.readyButton2.style.display = 'none'
     gameSummary.cellStates.forEach((state, i) => {

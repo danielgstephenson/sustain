@@ -4,7 +4,7 @@ import { CellSummary } from './summaries/cellSummary'
 import { ManifoldSummary } from './summaries/manifoldSummary'
 
 export class Manifold {
-  size = 34
+  size = 28
   cells: Cell[] = []
   grid: Cell[][] = range(this.size).map(() => [])
   summary: ManifoldSummary
@@ -134,13 +134,19 @@ export class Manifold {
       cell.distance = Math.min(...distances)
     })
     const options = this.cells.filter(c => c.distance < 0.2 * this.size)
-    range(300).forEach(_ => {
+    range(20).forEach(_ => {
       const cell = choose(options)
       if (cell.state === 0) cell.state = 5
     })
-    range(2).forEach(_ => {
-      this.decay()
+    const lagManifold = this.summarize()
+    range(1).forEach(_ => {
+      this.cells.forEach(cell => {
+        const lagCell = lagManifold.cells[cell.index]
+        const count5 = this.countNeighbors(lagCell, lagManifold, 5)
+        if (lagCell.state === 0 && count5 > 1) cell.state = 5
+      })
     })
+    this.decay()
   }
 
   summarize (): ManifoldSummary {

@@ -26,12 +26,11 @@ export class Game {
   maxCountdown: number
   decisionCount = 0
   maxReserve = 2
-  victoryScore = 9999 // 50
   stepInterval = 0.5
   state = 'decision'
   decisionSteps = 15
   actionSteps = 4
-  victorySteps = 15
+  victorySteps = 30
 
   constructor () {
     this.teams[1] = new Team(1)
@@ -160,27 +159,21 @@ export class Game {
   score (): void {
     const cellCount1 = this.manifold.cells.filter(c => c.state === 1).length
     const cellCount2 = this.manifold.cells.filter(c => c.state === 2).length
-    this.teams[1].cells = cellCount1
-    this.teams[2].cells = cellCount2
+    this.teams[1].cellCount = cellCount1
+    this.teams[2].cellCount = cellCount2
+    this.teams[1].victory = false
+    this.teams[2].victory = false
     if (cellCount1 > cellCount2) {
-      this.teams[1].score += 1
-      this.teams[2].score = 0
-    }
-    if (cellCount2 > cellCount1) {
-      this.teams[1].score = 0
-      this.teams[2].score += 1
-    }
-    const score1 = this.teams[1].score
-    const score2 = this.teams[2].score
-    if (score1 > score2 && score1 >= this.victoryScore) {
       this.teams[1].victory = true
     }
-    if (score2 > score1 && score2 >= this.victoryScore) {
+    if (cellCount2 > cellCount1) {
       this.teams[2].victory = true
     }
-    if (this.teams[1].victory || this.teams[2].victory) {
+    const redCount = this.manifold.cells.filter(c => c.state === 5).length
+    if (redCount === 0) {
       this.state = 'victory'
       this.countdown = this.victorySteps
+      this.maxCountdown = this.victorySteps
     }
   }
 

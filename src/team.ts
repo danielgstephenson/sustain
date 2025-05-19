@@ -1,8 +1,7 @@
 export class Team {
   choices: number[] = []
   oldChoices: number[] = []
-  score = 0
-  cells = 0
+  cellCount = 0
   reserve = 2
   victory = false
   ready = false

@@ -5,7 +5,6 @@ export class GameSummary {
   team = 1
   state = 'decision'
   countdown = 0
-  victoryScore = 100
   cellStates: number[] = []
   token = ''
   maxCountdown = 80
@@ -25,7 +24,6 @@ export class GameSummary {
       this.teams[2] = new TeamSummary(game.teams[2])
       this.cellStates = game.manifold.cells.map(c => c.state)
       this.token = game.token
-      this.victoryScore = game.victoryScore
       this.maxCountdown = game.maxCountdown
       this.decisionCount = game.decisionCount
       this.stepInterval = game.stepInterval

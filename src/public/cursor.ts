@@ -1,4 +1,5 @@
 import { Circle, Line, Svg, SVG } from '@svgdotjs/svg.js'
+import { GameSummary } from '../summaries/gameSummary'
 
 export class Cursor {
   cursorDiv = document.getElementById('cursorDiv') as HTMLDivElement
@@ -22,7 +23,7 @@ export class Cursor {
     this.circle = this.svg.circle(this.diameter)
     this.circle.center(50, 50)
     this.circle.fill({ opacity: 0 })
-    this.circle.stroke({ width: 7, color: 'white', opacity: 0.3 })
+    this.circle.stroke({ width: 7, color: 'white', opacity: 0.5 })
     document.addEventListener('mousemove', (event) => {
       const x = event.clientX
       const y = event.clientY
@@ -30,9 +31,17 @@ export class Cursor {
     })
   }
 
-  setTime (time: number): void {
+  onStep (game: GameSummary): void {
     const circumference = this.diameter * Math.PI
-    this.circle.stroke({ dasharray: `${time * circumference} ${circumference}` })
+    const time = game.countdown / game.maxCountdown
+    const difference = game.teams[2].cellCount - game.teams[1].cellCount
+    const H = difference > 0 ? 120 : 220
+    const S = 3 * Math.abs(difference)
+    this.circle.stroke({
+      dasharray: `${time * circumference} ${circumference}`,
+      color: `hsl(${H}, ${S}%, 50%)`,
+      opacity: game.state === 'victory' ? 0.75 : 0.5
+    })
   }
 
   setTeam (team: number): void {
