@@ -29,7 +29,7 @@ export class Game {
   stepInterval = 0.5
   state = 'decision'
   decisionSteps = 15
-  actionSteps = 4
+  actionSteps = 6
   victorySteps = 30
 
   constructor () {
